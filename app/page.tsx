@@ -114,6 +114,7 @@ function TestimonialsCarousel() {
                         alt={testimonial.name}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                     </div>
                     <div className="flex-1">
