@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { User, AuthTokens } from "../types";
+import { setAuthCookies, clearAuthCookies } from "./cookies";
 
 interface AuthStore {
   user: User | null;
@@ -27,22 +28,31 @@ export const useAuthStore = create<AuthStore>()(
 
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       
-      setTokens: (tokens) => set({ tokens }),
+      setTokens: (tokens) => {
+        if (tokens) setAuthCookies(tokens.accessToken, tokens.refreshToken);
+        set({ tokens });
+      },
       
       setLoading: (isLoading) => set({ isLoading }),
       
-      login: (user, tokens) => set({ 
-        user, 
-        tokens, 
-        isAuthenticated: true,
-        isLoading: false 
-      }),
+      login: (user, tokens) => {
+        setAuthCookies(tokens.accessToken, tokens.refreshToken);
+        set({ 
+          user, 
+          tokens, 
+          isAuthenticated: true,
+          isLoading: false 
+        });
+      },
       
-      logout: () => set({ 
-        user: null, 
-        tokens: null, 
-        isAuthenticated: false 
-      }),
+      logout: () => {
+        clearAuthCookies();
+        set({ 
+          user: null, 
+          tokens: null, 
+          isAuthenticated: false 
+        });
+      },
       
       updateUser: (userData) => {
         const currentUser = get().user;

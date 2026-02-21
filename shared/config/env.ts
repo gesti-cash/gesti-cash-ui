@@ -15,6 +15,13 @@ export const getAppUrl = () => env.appUrl;
 // Sur ces domaines, on affiche la landing page (pas d'extraction de tenant).
 const DEPLOYMENT_PLATFORM_DOMAINS = ["vercel.app", "netlify.app"];
 
+export const isDeploymentPlatformDomain = (hostname: string): boolean => {
+  const hostWithoutPort = hostname.split(":")[0];
+  return DEPLOYMENT_PLATFORM_DOMAINS.some(
+    (domain) => hostWithoutPort === domain || hostWithoutPort.endsWith("." + domain)
+  );
+};
+
 // Extraction du tenant depuis le sous-domaine
 export const getTenantFromDomain = (hostname: string): string | null => {
   // Si on est en local, on peut utiliser tenant1.localhost:3000
@@ -42,10 +49,7 @@ export const getTenantFromDomain = (hostname: string): string | null => {
   }
   
   // Domaine de plateforme (ex: gesti-cash-ui.vercel.app) → pas de tenant, afficher la landing
-  const isDeploymentDomain = DEPLOYMENT_PLATFORM_DOMAINS.some(
-    (domain) => hostWithoutPort === domain || hostWithoutPort.endsWith("." + domain)
-  );
-  if (isDeploymentDomain) {
+  if (isDeploymentPlatformDomain(hostname)) {
     return null;
   }
   

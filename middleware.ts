@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantFromDomain } from "./shared/config/env";
+import { getTenantFromDomain, isDeploymentPlatformDomain } from "./shared/config/env";
 
 // Routes publiques qui ne nécessitent pas d'authentification
 const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/tenant-required"];
@@ -43,8 +43,9 @@ export async function middleware(request: NextRequest) {
   }
   
   // Si la route nécessite un tenant mais qu'il n'y en a pas
-  if (requiresTenant && !tenantSlug) {
-    // Rediriger vers une page d'erreur ou de sélection de tenant
+  // Exception : sur un domaine de déploiement (ex. Vercel), on laisse passer (tenant optionnel)
+  const onDeploymentDomain = isDeploymentPlatformDomain(hostname);
+  if (requiresTenant && !tenantSlug && !onDeploymentDomain) {
     const url = request.nextUrl.clone();
     url.pathname = "/tenant-required";
     return NextResponse.redirect(url);
