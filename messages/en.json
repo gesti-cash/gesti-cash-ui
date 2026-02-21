@@ -1,0 +1,57 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Operation successful",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "rememberMe": "Remember me",
+    "welcomeBack": "Welcome back!",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "firstName": "First name",
+    "lastName": "Last name"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome",
+    "stats": "Statistics",
+    "recentTransactions": "Recent transactions",
+    "balance": "Balance",
+    "income": "Income",
+    "expenses": "Expenses"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "preferences": "Preferences",
+    "notifications": "Notifications",
+    "security": "Security",
+    "general": "General",
+    "account": "Account"
+  },
+  "errors": {
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access forbidden",
+    "notFound": "Not found",
+    "serverError": "Server error",
+    "networkError": "Network error",
+    "tenantNotFound": "Organization not found",
+    "tenantMismatch": "Organization mismatch"
+  }
+}

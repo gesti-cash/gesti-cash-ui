@@ -1,0 +1,57 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "success": "Opération réussie",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer"
+  },
+  "auth": {
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "register": "Inscription",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "rememberMe": "Se souvenir de moi",
+    "welcomeBack": "Bon retour !",
+    "noAccount": "Pas encore de compte ?",
+    "hasAccount": "Déjà un compte ?",
+    "firstName": "Prénom",
+    "lastName": "Nom"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bienvenue",
+    "stats": "Statistiques",
+    "recentTransactions": "Transactions récentes",
+    "balance": "Solde",
+    "income": "Revenus",
+    "expenses": "Dépenses"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "profile": "Profil",
+    "preferences": "Préférences",
+    "notifications": "Notifications",
+    "security": "Sécurité",
+    "general": "Général",
+    "account": "Compte"
+  },
+  "errors": {
+    "unauthorized": "Non autorisé",
+    "forbidden": "Accès interdit",
+    "notFound": "Non trouvé",
+    "serverError": "Erreur serveur",
+    "networkError": "Erreur réseau",
+    "tenantNotFound": "Organisation non trouvée",
+    "tenantMismatch": "Problème d'organisation"
+  }
+}

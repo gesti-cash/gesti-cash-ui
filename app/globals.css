@@ -1,26 +1,190 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tailwind v4 : par défaut dark: suit prefers-color-scheme. On force la variante sur html.dark pour que le toggle (light/dark) fonctionne. */
+@custom-variant dark (&:where(html.dark, html.dark *));
+
+@theme {
+  /* GestiCash Brand Colors */
+  --color-gesticash-green: #4CAF50;
+  --color-gesticash-blue: #1E88E5;
+  --color-gesticash-orange: #F9A825;
+  --color-gesticash-gray: #616161;
+  
+  /* Light Theme */
+  --color-background: oklch(100% 0 0);
+  --color-foreground: oklch(25% 0.01 250);
+  --color-card: oklch(100% 0 0);
+  --color-card-foreground: oklch(25% 0.01 250);
+  --color-popover: oklch(100% 0 0);
+  --color-popover-foreground: oklch(25% 0.01 250);
+  
+  /* Primary: Vert GestiCash (#4CAF50) - Croissance, gestion */
+  --color-primary: oklch(66% 0.15 145);
+  --color-primary-foreground: oklch(100% 0 0);
+  
+  /* Secondary: Bleu GestiCash (#1E88E5) - Technologie, fiabilité */
+  --color-secondary: oklch(56% 0.15 250);
+  --color-secondary-foreground: oklch(100% 0 0);
+  
+  /* Accent: Orange GestiCash (#F9A825) - Progression, accent */
+  --color-accent: oklch(75% 0.15 75);
+  --color-accent-foreground: oklch(25% 0.01 250);
+  
+  --color-muted: oklch(96% 0.005 250);
+  --color-muted-foreground: oklch(55% 0.01 250);
+  --color-destructive: oklch(58% 0.22 25);
+  --color-destructive-foreground: oklch(100% 0 0);
+  --color-border: oklch(90% 0.005 250);
+  --color-input: oklch(90% 0.005 250);
+  --color-ring: oklch(66% 0.15 145);
+  
+  /* Success & Info */
+  --color-success: oklch(66% 0.15 145);
+  --color-info: oklch(56% 0.15 250);
+  --color-warning: oklch(75% 0.15 75);
+  
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  
+  /* Font Family */
+  --font-sans: var(--font-montserrat), system-ui, -apple-system, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+  }
+}
+
+@layer utilities {
+  /* Grid background pattern */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, oklch(90% 0.005 250) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(90% 0.005 250) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  
+  .dark .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, oklch(28% 0.01 250) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(28% 0.01 250) 1px, transparent 1px);
+  }
+  
+  /* Smooth animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.8;
+    }
+  }
+  
+  .animate-pulse-soft {
+    animation: pulse-soft 3s ease-in-out infinite;
+  }
+  
+  /* Gradient text utilities */
+  .text-gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  /* Smooth scrolling sections */
+  .smooth-scroll-section {
+    scroll-margin-top: 80px;
+  }
+}
+
+.dark {
+  --color-background: oklch(18% 0.01 250);
+  --color-foreground: oklch(98% 0.005 250);
+  --color-card: oklch(20% 0.01 250);
+  --color-card-foreground: oklch(98% 0.005 250);
+  --color-popover: oklch(20% 0.01 250);
+  --color-popover-foreground: oklch(98% 0.005 250);
+  
+  /* Primary: Vert GestiCash - légèrement plus clair en mode sombre */
+  --color-primary: oklch(70% 0.15 145);
+  --color-primary-foreground: oklch(18% 0.01 250);
+  
+  /* Secondary: Bleu GestiCash - légèrement plus clair en mode sombre */
+  --color-secondary: oklch(60% 0.15 250);
+  --color-secondary-foreground: oklch(100% 0 0);
+  
+  /* Accent: Orange GestiCash */
+  --color-accent: oklch(78% 0.15 75);
+  --color-accent-foreground: oklch(18% 0.01 250);
+  
+  --color-muted: oklch(25% 0.01 250);
+  --color-muted-foreground: oklch(70% 0.01 250);
+  --color-destructive: oklch(62% 0.22 25);
+  --color-destructive-foreground: oklch(100% 0 0);
+  --color-border: oklch(28% 0.01 250);
+  --color-input: oklch(28% 0.01 250);
+  --color-ring: oklch(70% 0.15 145);
+  
+  /* Success & Info */
+  --color-success: oklch(70% 0.15 145);
+  --color-info: oklch(60% 0.15 250);
+  --color-warning: oklch(78% 0.15 75);
 }
