@@ -50,7 +50,8 @@
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   
-  /* Font Family */
+  /* Font Family (system stack to avoid Google Fonts fetch at build time) */
+  --font-montserrat: "Montserrat", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: var(--font-montserrat), system-ui, -apple-system, sans-serif;
 }
 

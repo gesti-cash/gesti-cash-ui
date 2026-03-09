@@ -55,7 +55,7 @@ export const usePurchaseOrders = (
 ) => {
   return useQuery({
     queryKey: tenantId
-      ? queryKeys.purchaseOrders.list(tenantId, params)
+      ? queryKeys.purchaseOrders.list(tenantId, params as Record<string, unknown>)
       : ["purchaseOrders", "null"],
     queryFn: async () => {
       if (!tenantId) throw new Error("No tenant ID provided");

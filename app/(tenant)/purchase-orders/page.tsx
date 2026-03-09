@@ -68,7 +68,7 @@ const STATUS_FILTERS = [
   { value: "received", label: "Réceptionné" },
 ];
 
-const formatPrice = (price: number | string): string => {
+const formatPrice = (price: number | string | undefined): string => {
   return `${Number(price ?? 0).toLocaleString("fr-FR")} FCFA`;
 };
 
