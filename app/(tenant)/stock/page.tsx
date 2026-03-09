@@ -2,78 +2,89 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent } from "@/shared/ui/card";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import {
   useTenantId,
   useSelectedOrganizationId,
   useSetSelectedOrganizationId,
 } from "@/shared/tenant/store";
 import { useOrganizations } from "@/shared/organizations/hooks";
+import { useProducts } from "@/shared/products/hooks";
 import {
-  useCustomers,
-  useCreateCustomer,
-  useUpdateCustomer,
-  useDeleteCustomer,
-} from "@/shared/customers/hooks";
+  useStocks,
+  useCreateOrAdjustStock,
+  useUpdateStockQuantity,
+  useDeleteStock,
+} from "@/shared/stocks/hooks";
+import type { Stock } from "@/shared/stocks/hooks";
 import { extractApiError } from "@/shared/api/axios";
-import type { Customer } from "@/shared/customers/hooks";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import {
-  Users,
+  Warehouse,
   Plus,
   Search,
   X,
   AlertTriangle,
   CheckCircle2,
   Loader2,
-  Phone,
+  Package,
   Building2,
-  ExternalLink,
   Pencil,
   Trash2,
+  Hash,
 } from "lucide-react";
 
-// ─── Schémas de validation ───────────────────────────────────────────────────
-
-const createCustomerSchema = z.object({
-  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
-  phone: z.string().min(1, "Le téléphone est requis"),
-  organization_id: z
-    .string()
-    .min(1, "Veuillez sélectionner une organisation"),
+const createOrAdjustStockSchema = z.object({
+  product_id: z.string().min(1, "Veuillez sélectionner un produit"),
+  quantity: z.number().int().min(0, "La quantité doit être ≥ 0"),
+  organization_id: z.string().min(1, "Veuillez sélectionner une organisation"),
 });
 
-const updateCustomerSchema = z.object({
-  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères").optional(),
-  phone: z.string().min(1, "Le téléphone est requis").optional(),
-  organization_id: z.string().optional(),
+type CreateOrAdjustStockFormValues = z.infer<typeof createOrAdjustStockSchema>;
+
+const updateQuantitySchema = z.object({
+  quantity: z.number().int().min(0, "La quantité doit être ≥ 0"),
 });
 
-type CreateCustomerFormValues = z.infer<typeof createCustomerSchema>;
-type UpdateCustomerFormValues = z.infer<typeof updateCustomerSchema>;
+type UpdateQuantityFormValues = z.infer<typeof updateQuantitySchema>;
 
-// ─── Composant principal ──────────────────────────────────────────────────────
+function DetailRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="flex justify-between items-start gap-4 py-2 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400 shrink-0">
+        {label}
+      </span>
+      <span className="text-sm text-zinc-900 dark:text-zinc-100 text-right break-all">
+        {value}
+      </span>
+    </div>
+  );
+}
 
-export default function CustomersPage() {
+export default function StockPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [editingStock, setEditingStock] = useState<Stock | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const tenantId = useTenantId();
   const persistedOrgId = useSelectedOrganizationId(tenantId ?? undefined);
   const setSelectedOrganizationId = useSetSelectedOrganizationId();
   const { data: organizations = [] } = useOrganizations(tenantId);
-  const defaultOrg =
-    organizations.find((o) => o.is_default) ?? organizations[0];
+  const defaultOrg = organizations.find((o) => o.is_default) ?? organizations[0];
 
   const {
     register,
@@ -82,20 +93,11 @@ export default function CustomersPage() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<CreateCustomerFormValues>({
-    resolver: zodResolver(createCustomerSchema),
+  } = useForm<CreateOrAdjustStockFormValues>({
+    resolver: zodResolver(createOrAdjustStockSchema),
     defaultValues: {
-      name: "",
-      phone: "",
-      organization_id: "",
-    },
-  });
-
-  const updateForm = useForm<UpdateCustomerFormValues>({
-    resolver: zodResolver(updateCustomerSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
+      product_id: "",
+      quantity: 0,
       organization_id: "",
     },
   });
@@ -108,7 +110,8 @@ export default function CustomersPage() {
     if (initialOrgId) setValue("organization_id", initialOrgId);
   }, [tenantId, organizations, persistedOrgId, defaultOrg?.id, setValue]);
 
-  const selectedOrgId = watch("organization_id");
+  const selectedOrgId =
+    watch("organization_id") || persistedOrgId || defaultOrg?.id;
 
   useEffect(() => {
     if (tenantId && selectedOrgId) {
@@ -116,27 +119,37 @@ export default function CustomersPage() {
     }
   }, [tenantId, selectedOrgId, setSelectedOrganizationId]);
 
-  const { data: customers = [], isLoading, error } = useCustomers(
+  const { data: stocks = [], isLoading, error } = useStocks(
     tenantId,
-    selectedOrgId || defaultOrg?.id
+    selectedOrgId || undefined
   );
+  const { data: products = [] } = useProducts(tenantId, selectedOrgId);
 
-  const createCustomer = useCreateCustomer(tenantId, selectedOrgId);
-  const updateCustomer = useUpdateCustomer(tenantId, selectedOrgId);
-  const deleteCustomer = useDeleteCustomer(tenantId, selectedOrgId);
+  const updateQuantityForm = useForm<UpdateQuantityFormValues>({
+    resolver: zodResolver(updateQuantitySchema),
+    defaultValues: { quantity: 0 },
+  });
+
+  const createOrAdjustStock = useCreateOrAdjustStock(
+    tenantId,
+    selectedOrgId || undefined
+  );
+  const updateQuantity = useUpdateStockQuantity(
+    tenantId,
+    selectedOrgId || undefined
+  );
+  const deleteStock = useDeleteStock(tenantId, selectedOrgId || undefined);
 
   const onSubmitCreate = handleSubmit(async (values) => {
-    await createCustomer.mutateAsync(
+    await createOrAdjustStock.mutateAsync(
       {
-        name: values.name,
-        phone: values.phone,
-        organization_id: values.organization_id,
+        product_id: values.product_id,
+        quantity: values.quantity,
       },
       {
         onSuccess: () => {
           setCreateSuccess(true);
-          reset();
-          if (defaultOrg?.id) setValue("organization_id", defaultOrg.id);
+          reset({ product_id: "", quantity: 0, organization_id: values.organization_id });
           setTimeout(() => {
             setCreateSuccess(false);
             setShowCreateModal(false);
@@ -146,56 +159,60 @@ export default function CustomersPage() {
     );
   });
 
-  const onSubmitUpdate = updateForm.handleSubmit(async (values) => {
-    if (!editingCustomer) return;
-    await updateCustomer.mutateAsync(
-      {
-        id: editingCustomer.id,
-        ...(values.name && { name: values.name }),
-        ...(values.phone !== undefined && { phone: values.phone }),
-        ...(values.organization_id && {
-          organization_id: values.organization_id,
-        }),
-      },
-      {
-        onSuccess: () => {
-          setEditingCustomer(null);
-        },
-      }
-    );
-  });
+  const onSubmitUpdateQuantity = updateQuantityForm.handleSubmit(
+    async (values) => {
+      if (!editingStock) return;
+      await updateQuantity.mutateAsync(
+        { id: editingStock.id, quantity: values.quantity },
+        {
+          onSuccess: () => {
+            setEditingStock(null);
+            setSelectedStock(null);
+          },
+        }
+      );
+    }
+  );
 
-  const handleDelete = async (customer: Customer) => {
-    if (!confirm(`Supprimer le client « ${customer.name} » ?`)) return;
-    setDeletingId(customer.id);
-    await deleteCustomer.mutateAsync(customer.id, {
+  const handleDelete = async (stock: Stock) => {
+    const productLabel =
+      products.find((p) => p.id === stock.product_id)?.name ?? stock.product_id;
+    if (!confirm(`Supprimer le stock pour « ${productLabel} » ?`)) return;
+    setDeletingId(stock.id);
+    await deleteStock.mutateAsync(stock.id, {
       onSettled: () => setDeletingId(null),
-      onSuccess: () => setSelectedCustomer(null),
+      onSuccess: () => setSelectedStock(null),
     });
   };
 
   useEffect(() => {
-    if (editingCustomer) {
-      updateForm.reset({
-        name: editingCustomer.name,
-        phone: editingCustomer.phone,
-        organization_id: editingCustomer.organization_id,
-      });
+    if (editingStock) {
+      updateQuantityForm.reset({ quantity: editingStock.quantity });
     }
-  }, [editingCustomer, updateForm]);
+  }, [editingStock, updateQuantityForm]);
 
   const canSubmitCreate =
     !!selectedOrgId &&
     !!tenantId &&
-    !createCustomer.isPending &&
+    !createOrAdjustStock.isPending &&
     !createSuccess;
   const showNoOrgMessage = organizations.length === 0 || !selectedOrgId;
 
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.phone && c.phone.includes(searchQuery))
-  );
+  const getProductLabel = (stock: Stock) => {
+    if (stock.product?.name) return stock.product.name;
+    const p = products.find((x) => x.id === stock.product_id);
+    return p ? `${p.name}${p.sku ? ` (${p.sku})` : ""}` : stock.product_id;
+  };
+
+  const filtered = stocks.filter((s) => {
+    const label = getProductLabel(s).toLowerCase();
+    const q = String(s.quantity);
+    return (
+      label.includes(searchQuery.toLowerCase()) || q.includes(searchQuery)
+    );
+  });
+
+  const totalQuantity = filtered.reduce((acc, s) => acc + s.quantity, 0);
 
   if (isLoading) {
     return (
@@ -205,7 +222,7 @@ export default function CustomersPage() {
             <div className="h-16 w-16 animate-spin rounded-full border-4 border-emerald-500/20 border-t-emerald-500 mx-auto" />
           </div>
           <p className="text-lg font-semibold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
-            Chargement des clients...
+            Chargement des stocks...
           </p>
         </div>
       </div>
@@ -227,7 +244,7 @@ export default function CustomersPage() {
               <p className="text-sm text-zinc-500 mb-6">
                 {error instanceof Error
                   ? error.message
-                  : "Une erreur est survenue lors du chargement des clients"}
+                  : "Une erreur est survenue lors du chargement des stocks"}
               </p>
               <Button
                 onClick={() => window.location.reload()}
@@ -256,15 +273,15 @@ export default function CustomersPage() {
               <div className="relative group">
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/30 to-teal-600/30 blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
                 <div className="relative h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20 p-3 shadow-2xl shadow-emerald-500/20 ring-2 ring-emerald-500/20 group-hover:scale-105 transition-transform duration-300">
-                  <Users className="h-full w-full text-emerald-400 dark:text-emerald-500" />
+                  <Warehouse className="h-full w-full text-emerald-400 dark:text-emerald-500" />
                 </div>
               </div>
               <div>
                 <h1 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 bg-clip-text text-transparent mb-2 tracking-tight">
-                  Clients
+                  Vue Stock
                 </h1>
                 <p className="text-zinc-500 text-sm lg:text-base dark:text-zinc-400 font-medium">
-                  Gérez vos clients
+                  Liste des stocks et quantités
                 </p>
               </div>
             </div>
@@ -273,7 +290,7 @@ export default function CustomersPage() {
               className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 px-6 py-2.5 font-semibold transition-all duration-200 hover:scale-105 group"
             >
               <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-              Nouveau client
+              Créer / Ajuster stock
             </Button>
           </div>
 
@@ -282,14 +299,29 @@ export default function CustomersPage() {
               <CardContent className="p-4 relative z-10">
                 <div className="flex items-center justify-between mb-2">
                   <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20">
-                    <Users className="h-4 w-4 text-emerald-500" />
+                    <Warehouse className="h-4 w-4 text-emerald-500" />
                   </div>
                 </div>
                 <div className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent mb-1">
-                  {customers.length}
+                  {stocks.length}
                 </div>
                 <p className="text-xs text-zinc-500 font-medium">
-                  Clients au total
+                  Références en stock
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-teal-500/40 transition-all duration-500 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
+              <CardContent className="p-4 relative z-10">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-teal-500/20 to-emerald-500/20">
+                    <Hash className="h-4 w-4 text-teal-500" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-teal-500 to-emerald-500 bg-clip-text text-transparent mb-1">
+                  {totalQuantity}
+                </div>
+                <p className="text-xs text-zinc-500 font-medium">
+                  Quantité totale (filtrée)
                 </p>
               </CardContent>
             </Card>
@@ -299,7 +331,7 @@ export default function CustomersPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-emerald-500 transition-colors" />
             <Input
               type="text"
-              placeholder="Rechercher par nom ou téléphone..."
+              placeholder="Rechercher par produit ou quantité..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-12 pr-12 h-14 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-zinc-200/80 dark:border-zinc-800/80 focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-base shadow-lg transition-all duration-300"
@@ -321,16 +353,16 @@ export default function CustomersPage() {
               <div className="relative inline-block mb-6">
                 <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl animate-pulse" />
                 <div className="relative p-6 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/10">
-                  <Users className="h-16 w-16 text-zinc-400 dark:text-zinc-600" />
+                  <Warehouse className="h-16 w-16 text-zinc-400 dark:text-zinc-600" />
                 </div>
               </div>
               <p className="text-xl font-bold text-zinc-700 dark:text-zinc-300 mb-2">
-                Aucun client trouvé
+                Aucun stock trouvé
               </p>
               <p className="text-sm text-zinc-500 mb-6">
                 {searchQuery
                   ? "Essayez de modifier votre recherche"
-                  : "Commencez par créer votre premier client"}
+                  : "Aucun stock enregistré pour cette organisation."}
               </p>
               {!searchQuery && (
                 <Button
@@ -338,7 +370,7 @@ export default function CustomersPage() {
                   className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouveau client
+                  Créer / Ajuster stock
                 </Button>
               )}
             </CardContent>
@@ -351,13 +383,10 @@ export default function CustomersPage() {
                   <thead>
                     <tr className="border-b border-zinc-200/80 bg-gradient-to-r from-zinc-50 to-white dark:border-zinc-900/50 dark:from-zinc-950/50 dark:to-zinc-900/30">
                       <th className="px-6 py-4 text-left text-xs font-bold text-zinc-700 uppercase tracking-wider dark:text-zinc-300">
-                        Nom
+                        Produit
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Téléphone
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Organisation
+                        Quantité
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
                         Actions
@@ -365,38 +394,32 @@ export default function CustomersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-900/50">
-                    {filtered.map((customer) => (
+                    {filtered.map((stock) => (
                       <tr
-                        key={customer.id}
+                        key={stock.id}
                         className="group hover:bg-gradient-to-r hover:from-emerald-500/5 hover:to-teal-500/5 transition-all duration-300"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <div className="p-1.5 rounded-md bg-emerald-500/15">
-                              <Users className="h-3.5 w-3.5 text-emerald-500" />
+                              <Package className="h-3.5 w-3.5 text-emerald-500" />
                             </div>
                             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                              {customer.name}
+                              {getProductLabel(stock)}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-zinc-400" />
-                            {customer.phone || "—"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                            {organizations.find((o) => o.id === customer.organization_id)
-                              ?.name ?? customer.organization_id}
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 px-3 py-1 text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                            <Hash className="h-3.5 w-3.5 text-zinc-500" />
+                            {stock.quantity}
                           </span>
                         </td>
                         <td className="px-6 py-4 flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedCustomer(customer)}
+                            onClick={() => setSelectedStock(stock)}
                             className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
                           >
                             Voir
@@ -404,7 +427,7 @@ export default function CustomersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setEditingCustomer(customer)}
+                            onClick={() => setEditingStock(stock)}
                             className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -412,11 +435,11 @@ export default function CustomersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(customer)}
-                            disabled={deletingId === customer.id}
+                            onClick={() => handleDelete(stock)}
+                            disabled={deletingId === stock.id}
                             className="text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-500/10"
                           >
-                            {deletingId === customer.id ? (
+                            {deletingId === stock.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Trash2 className="h-3.5 w-3.5" />
@@ -432,13 +455,13 @@ export default function CustomersPage() {
           </Card>
         )}
 
-        {/* Modal détail */}
-        {selectedCustomer &&
+        {/* Modal détail stock */}
+        {selectedStock &&
           typeof document !== "undefined" &&
           createPortal(
             <div
               className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-              onClick={() => setSelectedCustomer(null)}
+              onClick={() => setSelectedStock(null)}
             >
               <Card
                 className="relative w-full max-w-lg bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
@@ -448,16 +471,16 @@ export default function CustomersPage() {
                   <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-xl">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-emerald-500/20">
-                        <Users className="h-5 w-5 text-emerald-500" />
+                        <Warehouse className="h-5 w-5 text-emerald-500" />
                       </div>
                       <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                        {selectedCustomer.name}
+                        {getProductLabel(selectedStock)}
                       </h2>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setSelectedCustomer(null)}
+                      onClick={() => setSelectedStock(null)}
                       className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     >
                       <X className="h-5 w-5" />
@@ -465,22 +488,27 @@ export default function CustomersPage() {
                   </div>
                   <div className="p-6 space-y-4">
                     <DetailRow
-                      label="Téléphone"
-                      value={selectedCustomer.phone || "—"}
+                      label="Produit"
+                      value={getProductLabel(selectedStock)}
                     />
-                    <DetailRow
-                      label="Organisation"
-                      value={
-                        organizations.find(
-                          (o) => o.id === selectedCustomer.organization_id
-                        )?.name ?? selectedCustomer.organization_id
-                      }
-                    />
-                    {selectedCustomer.created_at && (
+                    <DetailRow label="Quantité" value={selectedStock.quantity} />
+                    {selectedStock.created_at && (
                       <DetailRow
                         label="Créé le"
                         value={new Date(
-                          selectedCustomer.created_at
+                          selectedStock.created_at
+                        ).toLocaleDateString("fr-FR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      />
+                    )}
+                    {selectedStock.updated_at && (
+                      <DetailRow
+                        label="Modifié le"
+                        value={new Date(
+                          selectedStock.updated_at
                         ).toLocaleDateString("fr-FR", {
                           year: "numeric",
                           month: "long",
@@ -494,20 +522,20 @@ export default function CustomersPage() {
                       variant="outline"
                       className="flex-1"
                       onClick={() => {
-                        setEditingCustomer(selectedCustomer);
-                        setSelectedCustomer(null);
+                        setEditingStock(selectedStock);
+                        setSelectedStock(null);
                       }}
                     >
                       <Pencil className="h-4 w-4 mr-2" />
-                      Modifier
+                      Modifier quantité
                     </Button>
                     <Button
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/50"
-                      onClick={() => handleDelete(selectedCustomer)}
-                      disabled={deletingId === selectedCustomer.id}
+                      onClick={() => handleDelete(selectedStock)}
+                      disabled={deletingId === selectedStock.id}
                     >
-                      {deletingId === selectedCustomer.id ? (
+                      {deletingId === selectedStock.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -521,7 +549,7 @@ export default function CustomersPage() {
             document.body
           )}
 
-        {/* Modal création */}
+        {/* Modal créer / ajuster stock */}
         {showCreateModal &&
           typeof document !== "undefined" &&
           createPortal(
@@ -537,14 +565,14 @@ export default function CustomersPage() {
                   <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-xl">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-emerald-500/20">
-                        <Users className="h-5 w-5 text-emerald-500" />
+                        <Warehouse className="h-5 w-5 text-emerald-500" />
                       </div>
                       <div>
                         <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                          Nouveau client
+                          Créer ou ajuster un stock
                         </h2>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          Nom, téléphone et organisation
+                          Produit et quantité (tenantId + organizationId envoyés)
                         </p>
                       </div>
                     </div>
@@ -562,21 +590,21 @@ export default function CustomersPage() {
                     <div className="mx-6 mt-5 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-800 dark:text-emerald-200">
                       <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
                       <span className="font-semibold">
-                        Client créé avec succès !
+                        Stock créé ou ajusté avec succès !
                       </span>
                     </div>
                   )}
 
-                  {createCustomer.error && !createSuccess && (
+                  {createOrAdjustStock.error && !createSuccess && (
                     <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-300">
                       <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                       <span>
-                        {extractApiError(createCustomer.error).message}
+                        {extractApiError(createOrAdjustStock.error).message}
                       </span>
                     </div>
                   )}
 
-                  {showNoOrgMessage && !createCustomer.error && (
+                  {showNoOrgMessage && !createOrAdjustStock.error && (
                     <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
                       <Building2 className="h-5 w-5 shrink-0 mt-0.5" />
                       <div>
@@ -585,100 +613,84 @@ export default function CustomersPage() {
                             ? "Aucune organisation disponible"
                             : "Sélectionnez une organisation"}
                         </p>
-                        {organizations.length === 0 && (
-                          <Link
-                            href="/organizations/select"
-                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            Aller à la page Organisations
-                          </Link>
-                        )}
                       </div>
                     </div>
                   )}
 
-                  <form onSubmit={onSubmitCreate} className="p-6 space-y-5">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="cust-name" className="flex items-center gap-2 text-sm font-medium">
-                        Nom <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="cust-name"
-                        placeholder="ex: Jean Dupont"
-                        {...register("name")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                      {errors.name && (
-                        <p className="text-xs text-red-500">{errors.name.message}</p>
+                  <form onSubmit={onSubmitCreate} className="p-6 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="organization_id">Organisation</Label>
+                      <select
+                        id="organization_id"
+                        {...register("organization_id")}
+                        className="flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                      >
+                        <option value="">Choisir une organisation</option>
+                        {organizations.map((org) => (
+                          <option key={org.id} value={org.id}>
+                            {org.name}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.organization_id && (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {errors.organization_id.message}
+                        </p>
                       )}
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="cust-phone" className="flex items-center gap-2 text-sm font-medium">
-                        <Phone className="h-3.5 w-3.5 text-zinc-400" />
-                        Téléphone <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="cust-phone"
-                        placeholder="ex: +33 6 12 34 56 78"
-                        {...register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                      {errors.phone && (
-                        <p className="text-xs text-red-500">{errors.phone.message}</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="product_id">Produit</Label>
+                      <select
+                        id="product_id"
+                        {...register("product_id")}
+                        className="flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                      >
+                        <option value="">Choisir un produit</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} {p.sku ? `(${p.sku})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.product_id && (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {errors.product_id.message}
+                        </p>
                       )}
                     </div>
-                    {organizations.length > 0 && (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="cust-org" className="flex items-center gap-2 text-sm font-medium">
-                          <Building2 className="h-3.5 w-3.5 text-zinc-400" />
-                          Organisation <span className="text-red-500">*</span>
-                        </Label>
-                        <select
-                          id="cust-org"
-                          {...register("organization_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50"
-                        >
-                          <option value="">Sélectionner une organisation</option>
-                          {organizations.map((org) => (
-                            <option key={org.id} value={org.id}>
-                              {org.name}
-                              {org.is_default ? " (par défaut)" : ""}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.organization_id && (
-                          <p className="text-xs text-red-500">
-                            {errors.organization_id.message}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex gap-3 pt-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">Quantité</Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        min={0}
+                        {...register("quantity", { valueAsNumber: true })}
+                        className="bg-white dark:bg-zinc-900"
+                      />
+                      {errors.quantity && (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {errors.quantity.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex gap-2 pt-2">
                       <Button
                         type="button"
                         variant="outline"
+                        className="flex-1"
                         onClick={() => setShowCreateModal(false)}
-                        className="flex-1 border-zinc-200 dark:border-zinc-800"
-                        disabled={createCustomer.isPending}
                       >
                         Annuler
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 font-semibold"
                         disabled={!canSubmitCreate}
+                        className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
                       >
-                        {createCustomer.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Création...
-                          </>
+                        {createOrAdjustStock.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Créer le client
-                          </>
+                          "Enregistrer"
                         )}
                       </Button>
                     </div>
@@ -689,99 +701,83 @@ export default function CustomersPage() {
             document.body
           )}
 
-        {/* Modal modification */}
-        {editingCustomer &&
+        {/* Modal modifier quantité */}
+        {editingStock &&
           typeof document !== "undefined" &&
           createPortal(
             <div
               className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-              onClick={() => setEditingCustomer(null)}
+              onClick={() => setEditingStock(null)}
             >
               <Card
-                className="relative w-full max-w-lg bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
+                className="relative w-full max-w-md bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
                 onClick={(e) => e.stopPropagation()}
               >
                 <CardContent className="p-0">
                   <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-xl">
-                    <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                      Modifier le client
-                    </h2>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-emerald-500/20">
+                        <Pencil className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                        Modifier la quantité
+                      </h2>
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setEditingCustomer(null)}
+                      onClick={() => setEditingStock(null)}
+                      className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     >
                       <X className="h-5 w-5" />
                     </Button>
                   </div>
-                  {updateCustomer.error && (
-                    <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-300">
-                      <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-                      <span>
-                        {extractApiError(updateCustomer.error).message}
-                      </span>
-                    </div>
-                  )}
-                  <form onSubmit={onSubmitUpdate} className="p-6 space-y-5">
-                    <div className="space-y-1.5">
-                      <Label>Nom</Label>
+                  <form
+                    onSubmit={onSubmitUpdateQuantity}
+                    className="p-6 space-y-4"
+                  >
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      Produit : {getProductLabel(editingStock)}
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_quantity">Quantité</Label>
                       <Input
-                        {...updateForm.register("name")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                        id="edit_quantity"
+                        type="number"
+                        min={0}
+                        {...updateQuantityForm.register("quantity", {
+                          valueAsNumber: true,
+                        })}
+                        className="bg-white dark:bg-zinc-900"
                       />
-                      {updateForm.formState.errors.name && (
-                        <p className="text-xs text-red-500">
-                          {updateForm.formState.errors.name.message}
+                      {updateQuantityForm.formState.errors.quantity && (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {
+                            updateQuantityForm.formState.errors.quantity
+                              .message
+                          }
                         </p>
                       )}
                     </div>
-                    <div className="space-y-1.5">
-                      <Label>Téléphone</Label>
-                      <Input
-                        {...updateForm.register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                      />
-                      {updateForm.formState.errors.phone && (
-                        <p className="text-xs text-red-500">
-                          {updateForm.formState.errors.phone.message}
-                        </p>
-                      )}
-                    </div>
-                    {organizations.length > 0 && (
-                      <div className="space-y-1.5">
-                        <Label>Organisation</Label>
-                        <select
-                          {...updateForm.register("organization_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-                        >
-                          <option value="">—</option>
-                          {organizations.map((org) => (
-                            <option key={org.id} value={org.id}>
-                              {org.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-2 pt-2">
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setEditingCustomer(null)}
                         className="flex-1"
-                        disabled={updateCustomer.isPending}
+                        onClick={() => setEditingStock(null)}
                       >
                         Annuler
                       </Button>
                       <Button
                         type="submit"
+                        disabled={updateQuantity.isPending}
                         className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
-                        disabled={updateCustomer.isPending}
                       >
-                        {updateCustomer.isPending ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : null}
-                        Enregistrer
+                        {updateQuantity.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Enregistrer"
+                        )}
                       </Button>
                     </div>
                   </form>
@@ -791,21 +787,6 @@ export default function CustomersPage() {
             document.body
           )}
       </div>
-    </div>
-  );
-}
-
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800">
-      <span className="text-sm font-semibold text-zinc-500">{label}</span>
-      <span className="text-sm text-zinc-800 dark:text-zinc-200">{value}</span>
     </div>
   );
 }

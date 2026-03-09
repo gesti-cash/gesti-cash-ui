@@ -86,15 +86,17 @@ export const useMockLogin = () => {
           tenant: tenantStorage ? "présent" : "absent",
         });
         
+        const targetPath = "/organizations/select";
+
         if (authStorage && tenantStorage) {
-          console.log("[MOCK LOGIN] Redirection vers /dashboard");
+          console.log("[MOCK LOGIN] Redirection vers", targetPath);
           // Utiliser window.location pour forcer une navigation complète
-          window.location.href = "/dashboard";
+          window.location.href = targetPath;
         } else {
           console.warn("[MOCK LOGIN] Les données ne sont pas encore dans localStorage, nouvelle tentative...");
           // Réessayer après un court délai
           setTimeout(() => {
-            window.location.href = "/dashboard";
+            window.location.href = targetPath;
           }, 300);
         }
       }, 500);
@@ -130,7 +132,8 @@ export const useMockRegister = () => {
       setAuthState(data.user, data.tokens);
       setTenant(data.tenant);
       queryClient.setQueryData(queryKeys.auth.user, data.user);
-      router.push("/dashboard");
+      // Après inscription mock, passer aussi par la sélection d'organisation
+      router.push("/organizations/select");
     },
     onError: (error) => {
       console.error("Mock register error:", error);
@@ -157,6 +160,9 @@ export const useMockLogout = () => {
       clearAuthState();
       clearTenant();
       queryClient.clear();
+      if (typeof document !== "undefined") {
+        document.cookie = "gesticash_org_selected=; path=/; max-age=0";
+      }
       router.push("/login");
     },
   });

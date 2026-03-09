@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
+import { useRegister } from "@/shared/auth/hooks";
+import { extractApiError } from "@/shared/api/axios";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
@@ -45,6 +47,7 @@ const registerSchema = z.object({
   tenantSlug: z.string()
     .min(3, "Le nom de l'organisation doit contenir au moins 3 caractères")
     .regex(/^[a-z0-9-]+$/, "Uniquement lettres minuscules, chiffres et tirets"),
+  affiliationCode: z.string().optional(),
   acceptTerms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les conditions d'utilisation",
   }),
@@ -53,7 +56,7 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type RegisterInput = z.infer<typeof registerSchema>;
+type RegisterFormInput = z.infer<typeof registerSchema>;
 
 // Password strength indicator
 function getPasswordStrength(password: string): { strength: number; label: string; color: string } {
@@ -74,8 +77,8 @@ export default function RegisterPage() {
   const t = useTranslations("auth");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({ strength: 0, label: "", color: "" });
+  const registerMutation = useRegister();
 
   const {
     register,
@@ -83,7 +86,7 @@ export default function RegisterPage() {
     watch,
     formState: { errors },
     setError,
-  } = useForm<RegisterInput>({
+  } = useForm<RegisterFormInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: "",
@@ -91,6 +94,7 @@ export default function RegisterPage() {
       password: "",
       confirmPassword: "",
       tenantSlug: "",
+      affiliationCode: "",
       acceptTerms: false,
     },
   });
@@ -106,17 +110,19 @@ export default function RegisterPage() {
     }
   });
 
-  const onSubmit = async (data: RegisterInput) => {
-    setIsLoading(true);
+  const onSubmit = async (data: RegisterFormInput) => {
     try {
-      // TODO: Implement registration API call
-      console.log("Registration data:", data);
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
-      // Redirect to dashboard or login
+      // Adapter le payload à ce que ton API attend
+      await registerMutation.mutateAsync({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        tenantName: data.tenantSlug,
+        affiliationCode: data.affiliationCode || undefined,
+      } as any);
     } catch (error) {
-      setError("root", { message: "Une erreur s'est produite. Veuillez réessayer." });
-    } finally {
-      setIsLoading(false);
+      const apiError = extractApiError(error);
+      setError("root", { message: apiError.message });
     }
   };
 
@@ -401,10 +407,10 @@ export default function RegisterPage() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={registerMutation.isPending}
                   className="w-full h-11 bg-primary hover:bg-primary/90 font-semibold text-base group"
                 >
-                  {isLoading ? (
+                  {registerMutation.isPending ? (
                     <>
                       <motion.div
                         animate={{ rotate: 360 }}

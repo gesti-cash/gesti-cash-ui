@@ -106,32 +106,51 @@ const createAxiosInstance = (): AxiosInstance => {
 // Instance Axios par défaut
 export const apiClient = createAxiosInstance();
 
-// Helper pour extraire les erreurs API
+// Helper pour extraire les erreurs API (plusieurs formats possibles : message, detail, error)
 export const extractApiError = (error: unknown): ApiError => {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<ApiError>;
-    
-    if (axiosError.response?.data) {
+    const axiosError = error as AxiosError<{ message?: string; detail?: string; error?: string; statusMessage?: string; code?: string; errors?: Record<string, string[]> }>;
+    const data = axiosError.response?.data;
+    const status = axiosError.response?.status;
+
+    if (data && typeof data === "object") {
+      const message =
+        typeof data.message === "string"
+          ? data.message
+          : typeof data.detail === "string"
+            ? data.detail
+            : typeof data.error === "string"
+              ? data.error
+              : typeof data.statusMessage === "string"
+                ? data.statusMessage
+                : "Une erreur est survenue";
       return {
-        message: axiosError.response.data.message || "Une erreur est survenue",
-        code: axiosError.response.data.code,
-        statusCode: axiosError.response.status,
-        errors: axiosError.response.data.errors,
+        message,
+        code: data.code,
+        statusCode: status,
+        errors: data.errors,
       };
     }
-    
+
+    if (axiosError.response && status && status >= 400) {
+      return {
+        message: axiosError.message || `Erreur HTTP ${status}`,
+        statusCode: status,
+      };
+    }
+
     return {
       message: axiosError.message || "Erreur réseau",
-      statusCode: axiosError.response?.status,
+      statusCode: status,
     };
   }
-  
+
   if (error instanceof Error) {
     return {
       message: error.message,
     };
   }
-  
+
   return {
     message: "Une erreur inconnue est survenue",
   };

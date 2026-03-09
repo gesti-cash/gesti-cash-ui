@@ -1,31 +1,75 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
-import { useMockProducts } from "@/shared/mock";
+import { useTenantId, useSelectedOrganizationId, useSetSelectedOrganizationId } from "@/shared/tenant/store";
+import { useOrganizations } from "@/shared/organizations/hooks";
+import { useCreateProduct, useProducts, useUpdateProduct, useDeleteProduct, type Product } from "@/shared/products/hooks";
+import { useCategories } from "@/shared/categories/hooks";
 import {
   Package,
   Plus,
   Search,
   AlertTriangle,
-  MapPin,
   TrendingUp,
   DollarSign,
   Activity,
   Filter,
   X,
   Eye,
-  ChevronDown,
-  ChevronUp,
   Calendar,
   Info,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
+  Loader2,
+  Tag,
+  Hash,
+  Banknote,
+  Building2,
+  Pencil,
+  Trash2,
 } from "lucide-react";
-import type { MockProduct } from "@/shared/mock/generators";
+
+const FALLBACK_CATEGORIES = [
+  { id: "electronique", label: "Électronique" },
+  { id: "telephonie", label: "Téléphonie" },
+  { id: "informatique", label: "Informatique" },
+  { id: "mode", label: "Mode & Vêtements" },
+  { id: "accessoires", label: "Accessoires" },
+  { id: "beaute", label: "Beauté & Cosmétiques" },
+  { id: "maison", label: "Maison & Déco" },
+  { id: "sport", label: "Sport & Loisirs" },
+  { id: "alimentation", label: "Alimentation" },
+  { id: "bijouterie", label: "Bijouterie" },
+  { id: "autre", label: "Autre" },
+];
+
+const createProductSchema = z.object({
+  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
+  sku: z.string().min(2, "Le SKU doit comporter au moins 2 caractères"),
+  price: z.number().positive("Le prix doit être supérieur à 0"),
+  category_id: z.string().min(1, "Veuillez sélectionner une catégorie"),
+  organization_id: z.string().min(1, "Veuillez sélectionner une organisation"),
+});
+
+type CreateProductFormValues = z.infer<typeof createProductSchema>;
+
+const updateProductSchema = z.object({
+  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères").optional(),
+  sku: z.string().min(2, "Le SKU doit comporter au moins 2 caractères").optional(),
+  price: z.number().positive("Le prix doit être supérieur à 0").optional(),
+  category_id: z.string().min(1, "Veuillez sélectionner une catégorie").optional(),
+});
+type UpdateProductFormValues = z.infer<typeof updateProductSchema>;
 
 // Catégories disponibles pour les filtres
 const FILTER_CATEGORIES = [
@@ -51,11 +95,12 @@ const CATEGORY_MAP: Record<string, string[]> = {
   "Autre": ["Bijouterie"],
 };
 
-// Calculer la marge
-const calculateMargin = (product: MockProduct): number => {
-  if (!product.cost || product.cost === 0) return 0;
-  return ((product.price - product.cost) / product.cost) * 100;
-};
+// Résoudre le nom de catégorie à partir de category_id
+const getCategoryName = (
+  categoryId: string,
+  categories: { id: string; name: string }[]
+): string =>
+  categories.find((c) => c.id === categoryId)?.name ?? categoryId;
 
 // Formater le prix
 const formatPrice = (price: number): string => {
@@ -67,104 +112,185 @@ const ITEMS_PER_PAGE = 10;
 export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Tous");
-  const [selectedProduct, setSelectedProduct] = useState<MockProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState({
-    stockFilter: "all", // "all" | "low" | "inStock" | "outOfStock"
-    marginFilter: "all", // "all" | "high" | "medium" | "low"
+    stockFilter: "all",
+    marginFilter: "all",
     priceRange: { min: "", max: "" },
-    statusFilter: "all", // "all" | "active" | "inactive"
+    statusFilter: "all",
   });
-  const { data, isLoading, error } = useMockProducts({
-    page: 1,
-    limit: 100,
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createSuccess, setCreateSuccess] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  const tenantId = useTenantId();
+  const persistedOrgId = useSelectedOrganizationId(tenantId ?? undefined);
+  const setSelectedOrganizationId = useSetSelectedOrganizationId();
+  const { data: organizations = [] } = useOrganizations(tenantId);
+  const defaultOrg = organizations.find((o) => o.is_default) ?? organizations[0];
+  const { data: apiCategories = [] } = useCategories(tenantId, defaultOrg?.id);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<CreateProductFormValues>({
+    resolver: zodResolver(createProductSchema),
+    defaultValues: {
+      name: "",
+      sku: "",
+      price: undefined,
+      category_id: "",
+      organization_id: "",
+    },
   });
 
-  const handleImageError = (productId: string) => {
-    setImageErrors((prev) => new Set(prev).add(productId));
+  // Initialiser avec l'org persistée (si valide) ou l'org par défaut
+  useEffect(() => {
+    if (!tenantId || organizations.length === 0) return;
+    const validPersisted =
+      persistedOrgId && organizations.some((o) => o.id === persistedOrgId);
+    const initialOrgId = validPersisted ? persistedOrgId : defaultOrg?.id ?? "";
+    if (initialOrgId) setValue("organization_id", initialOrgId);
+  }, [tenantId, organizations, persistedOrgId, defaultOrg?.id, setValue]);
+
+  const selectedOrgId = watch("organization_id");
+
+  const {
+    register: registerEdit,
+    handleSubmit: handleSubmitEdit,
+    reset: resetEdit,
+    formState: { errors: errorsEdit },
+  } = useForm<UpdateProductFormValues>({
+    resolver: zodResolver(updateProductSchema),
+  });
+
+  useEffect(() => {
+    if (editingProduct) {
+      resetEdit({
+        name: editingProduct.name,
+        sku: editingProduct.sku,
+        price: editingProduct.price,
+        category_id: editingProduct.category_id,
+      });
+    }
+  }, [editingProduct, resetEdit]);
+
+  // Persister la sélection quand l'utilisateur change d'organisation
+  useEffect(() => {
+    if (tenantId && selectedOrgId) {
+      setSelectedOrganizationId(tenantId, selectedOrgId);
+    }
+  }, [tenantId, selectedOrgId, setSelectedOrganizationId]);
+
+  const createProduct = useCreateProduct(tenantId, selectedOrgId);
+  const updateProduct = useUpdateProduct(tenantId, selectedOrgId || undefined);
+  const deleteProduct = useDeleteProduct(tenantId, selectedOrgId || undefined);
+
+  const onSubmitCreate = handleSubmit(async (values) => {
+    await createProduct.mutateAsync(
+      {
+        name: values.name,
+        sku: values.sku,
+        price: values.price,
+        category_id: values.category_id,
+      },
+      {
+        onSuccess: () => {
+          setCreateSuccess(true);
+          reset();
+          if (defaultOrg?.id) setValue("organization_id", defaultOrg.id);
+          setTimeout(() => {
+            setCreateSuccess(false);
+            setShowCreateModal(false);
+          }, 2000);
+        },
+      }
+    );
+  });
+
+  const onSubmitEdit = handleSubmitEdit(async (values) => {
+    if (!editingProduct) return;
+    const payload: Record<string, unknown> = {};
+    if (values.name !== undefined) payload.name = values.name;
+    if (values.sku !== undefined) payload.sku = values.sku;
+    if (values.price !== undefined) payload.price = values.price;
+    if (values.category_id !== undefined) payload.category_id = values.category_id;
+    await updateProduct.mutateAsync(
+      { id: editingProduct.id, ...payload },
+      {
+        onSuccess: (updated) => {
+          setSelectedProduct(updated);
+          setEditingProduct(null);
+        },
+      }
+    );
+  });
+
+  const handleDeleteProduct = (product: Product) => {
+    if (!window.confirm(`Supprimer le produit « ${product.name} » ? (suppression douce)`)) return;
+    deleteProduct.mutate(product.id, {
+      onSuccess: () => {
+        setSelectedProduct(null);
+      },
+    });
   };
 
-  // Filtrer les produits par recherche et catégorie
+  const { data: apiProducts = [], isLoading, error } = useProducts(
+    tenantId ?? undefined,
+    selectedOrgId || undefined,
+    { page: 1, limit: 100 }
+  );
+
+  // Filtrer les produits par recherche et catégorie (données API)
   const filteredProducts = useMemo(() => {
-    if (!data?.data) return [];
-    
-    let products = data.data;
-    
-    // Filtre par catégorie
+    let products = apiProducts;
+
+    // Filtre par catégorie (nom résolu depuis category_id)
     if (selectedCategory !== "Tous") {
       const mappedCategories = CATEGORY_MAP[selectedCategory] || [];
       if (mappedCategories.length > 0) {
         products = products.filter((product) =>
-          mappedCategories.includes(product.category)
+          mappedCategories.includes(
+            getCategoryName(product.category_id, apiCategories)
+          )
         );
       }
     }
-    
-    // Filtre de recherche
+
+    // Filtre de recherche (nom, SKU, catégorie)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       products = products.filter(
         (product) =>
           product.name.toLowerCase().includes(query) ||
           product.sku.toLowerCase().includes(query) ||
-          product.category.toLowerCase().includes(query)
+          getCategoryName(product.category_id, apiCategories)
+            .toLowerCase()
+            .includes(query)
       );
     }
 
-    // Filtre par stock
-    if (filters.stockFilter !== "all") {
-      products = products.filter((product) => {
-        const isLowStock = product.minStock && product.stock <= product.minStock;
-        switch (filters.stockFilter) {
-          case "low":
-            return isLowStock;
-          case "inStock":
-            return product.stock > 0;
-          case "outOfStock":
-            return product.stock === 0;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filtre par marge
-    if (filters.marginFilter !== "all") {
-      products = products.filter((product) => {
-        const margin = calculateMargin(product);
-        switch (filters.marginFilter) {
-          case "high":
-            return margin >= 50;
-          case "medium":
-            return margin >= 20 && margin < 50;
-          case "low":
-            return margin < 20;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Filtre par prix
+    // Filtre par prix (API fournit price)
     if (filters.priceRange.min || filters.priceRange.max) {
       products = products.filter((product) => {
-        const min = filters.priceRange.min ? parseFloat(filters.priceRange.min) : 0;
-        const max = filters.priceRange.max ? parseFloat(filters.priceRange.max) : Infinity;
+        const min = filters.priceRange.min
+          ? parseFloat(filters.priceRange.min)
+          : 0;
+        const max = filters.priceRange.max
+          ? parseFloat(filters.priceRange.max)
+          : Infinity;
         return product.price >= min && product.price <= max;
       });
     }
 
-    // Filtre par statut
-    if (filters.statusFilter !== "all") {
-      products = products.filter((product) => {
-        return filters.statusFilter === "active" ? product.isActive : !product.isActive;
-      });
-    }
-    
     return products;
-  }, [data?.data, searchQuery, selectedCategory, filters]);
+  }, [apiProducts, apiCategories, searchQuery, selectedCategory, filters.priceRange]);
 
   // Pagination
   const totalItems = filteredProducts.length;
@@ -215,42 +341,20 @@ export default function ProductsPage() {
     return pages;
   };
 
-  // Compter les produits en alerte de stock
-  const lowStockCount = useMemo(() => {
-    if (!data?.data) return 0;
-    return data.data.filter(
-      (product) => product.minStock && product.stock <= product.minStock
-    ).length;
-  }, [data?.data]);
+  // Compter les produits en alerte de stock (API ne fournit pas le stock)
+  const lowStockCount = 0;
 
-  // Statistiques
+  // Statistiques (à partir des produits API)
   const stats = useMemo(() => {
-    if (!data?.data) {
-      return {
-        total: 0,
-        totalValue: 0,
-        averageMargin: 0,
-        lowStock: 0,
-      };
-    }
-    
-    const products = data.data;
-    const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
-    const margins = products
-      .map((p) => calculateMargin(p))
-      .filter((m) => m > 0);
-    const averageMargin =
-      margins.length > 0
-        ? margins.reduce((sum, m) => sum + m, 0) / margins.length
-        : 0;
-
+    const total = apiProducts.length;
+    const totalValue = apiProducts.reduce((sum, p) => sum + p.price, 0);
     return {
-      total: products.length,
+      total,
       totalValue,
-      averageMargin,
+      averageMargin: 0,
       lowStock: lowStockCount,
     };
-  }, [data?.data, lowStockCount]);
+  }, [apiProducts, lowStockCount]);
 
   if (isLoading) {
     return (
@@ -336,6 +440,7 @@ export default function ProductsPage() {
               </div>
             </div>
             <Button
+              onClick={() => setShowCreateModal(true)}
               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/20 dark:shadow-green-500/10 px-6 py-2.5 font-semibold transition-all duration-200 hover:scale-105 group"
             >
               <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
@@ -713,10 +818,10 @@ export default function ProductsPage() {
                   </thead>
                   <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-900/50">
                     {paginatedProducts.map((product, index) => {
-                      const margin = calculateMargin(product);
-                      const isLowStock =
-                        product.minStock && product.stock <= product.minStock;
-
+                      const categoryName = getCategoryName(
+                        product.category_id,
+                        apiCategories
+                      );
                       return (
                         <tr
                           key={product.id}
@@ -728,18 +833,9 @@ export default function ProductsPage() {
                           {/* Image */}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                              {product.imageUrl && !imageErrors.has(product.id) ? (
-                                <img
-                                  src={product.imageUrl}
-                                  alt={product.name}
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                  onError={() => handleImageError(product.id)}
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Package className="h-6 w-6 text-zinc-400 dark:text-zinc-600" />
-                                </div>
-                              )}
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="h-6 w-6 text-zinc-400 dark:text-zinc-600" />
+                              </div>
                             </div>
                           </td>
 
@@ -758,14 +854,14 @@ export default function ProductsPage() {
                           {/* Catégorie */}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Badge className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 text-xs font-semibold">
-                              {product.category}
+                              {categoryName}
                             </Badge>
                           </td>
 
-                          {/* Prix Achat */}
+                          {/* Prix Achat (non fourni par l'API) */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                              {formatPrice(product.cost || 0)}
+                            <div className="text-sm text-zinc-400 dark:text-zinc-500">
+                              —
                             </div>
                           </td>
 
@@ -776,47 +872,25 @@ export default function ProductsPage() {
                             </div>
                           </td>
 
-                          {/* Stock */}
+                          {/* Stock (non fourni par l'API) */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-sm font-bold ${
-                                  isLowStock
-                                    ? "text-yellow-600 dark:text-yellow-500"
-                                    : "text-zinc-700 dark:text-zinc-300"
-                                }`}
-                              >
-                                {product.stock}
-                              </span>
-                              {isLowStock && (
-                                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 animate-pulse" />
-                              )}
-                            </div>
-                            {product.minStock && (
-                              <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-1">
-                                Min: {product.minStock}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Marge */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent dark:from-green-400 dark:to-emerald-400">
-                              {margin.toFixed(1)}%
+                            <div className="text-sm text-zinc-400 dark:text-zinc-500">
+                              —
                             </div>
                           </td>
 
-                          {/* Statut */}
+                          {/* Marge (non fournie par l'API) */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge
-                              className={
-                                product.isActive
-                                  ? "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 dark:border-green-500/20 text-xs font-semibold"
-                                  : "bg-zinc-500/20 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 dark:border-zinc-500/20 text-xs font-semibold"
-                              }
-                            >
-                              {product.isActive ? "Actif" : "Inactif"}
-                            </Badge>
+                            <div className="text-sm text-zinc-400 dark:text-zinc-500">
+                              —
+                            </div>
+                          </td>
+
+                          {/* Statut (non fourni par l'API) */}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-zinc-400 dark:text-zinc-500">
+                              —
+                            </div>
                           </td>
 
                           {/* Actions */}
@@ -919,12 +993,223 @@ export default function ProductsPage() {
           </Card>
         )}
 
-        {/* Modal de détails produit */}
-        {selectedProduct && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-            onClick={() => setSelectedProduct(null)}
-          >
+        {/* Modal de création de produit (portail pour passer au-dessus du header) */}
+        {showCreateModal &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+              onClick={() => setShowCreateModal(false)}
+            >
+            <Card
+              className="relative w-full max-w-lg bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardContent className="p-0">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5 rounded-t-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-600/20">
+                      <Package className="h-5 w-5 text-green-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                        Nouveau Produit
+                      </h2>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Renseignez les informations du produit
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowCreateModal(false)}
+                    className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                {/* Succès */}
+                {createSuccess && (
+                  <div className="mx-6 mt-5 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 p-4 text-sm text-emerald-800 dark:text-emerald-200">
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span className="font-semibold">Produit créé avec succès !</span>
+                  </div>
+                )}
+
+                {/* Erreur API */}
+                {createProduct.error && !createSuccess && (
+                  <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-300">
+                    <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
+                    <span>
+                      {(createProduct.error as { message?: string })?.message ??
+                        "Une erreur est survenue lors de la création du produit."}
+                    </span>
+                  </div>
+                )}
+
+                {/* Formulaire */}
+                <form onSubmit={onSubmitCreate} className="p-6 space-y-5">
+                  {/* Nom */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-name" className="flex items-center gap-2 text-sm font-medium">
+                      <Tag className="h-3.5 w-3.5 text-zinc-400" />
+                      Nom du produit <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="create-name"
+                      placeholder="ex: iPhone 15 Pro"
+                      {...register("name")}
+                      className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-green-500 dark:focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                    />
+                    {errors.name && (
+                      <p className="text-xs text-red-500">{errors.name.message}</p>
+                    )}
+                  </div>
+
+                  {/* SKU */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-sku" className="flex items-center gap-2 text-sm font-medium">
+                      <Hash className="h-3.5 w-3.5 text-zinc-400" />
+                      SKU <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="create-sku"
+                      placeholder="ex: IPHONE-15-PRO-128"
+                      {...register("sku")}
+                      className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-green-500 dark:focus:border-green-500 focus:ring-2 focus:ring-green-500/20 font-mono"
+                    />
+                    {errors.sku && (
+                      <p className="text-xs text-red-500">{errors.sku.message}</p>
+                    )}
+                  </div>
+
+                  {/* Prix */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-price" className="flex items-center gap-2 text-sm font-medium">
+                      <Banknote className="h-3.5 w-3.5 text-zinc-400" />
+                      Prix de vente (FCFA) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="create-price"
+                      type="number"
+                      min="0"
+                      step="1"
+                      placeholder="ex: 350000"
+                      {...register("price", { valueAsNumber: true })}
+                      className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-green-500 dark:focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
+                    />
+                    {errors.price && (
+                      <p className="text-xs text-red-500">{errors.price.message}</p>
+                    )}
+                  </div>
+
+                  {/* Catégorie */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-category" className="flex items-center gap-2 text-sm font-medium">
+                      <Filter className="h-3.5 w-3.5 text-zinc-400" />
+                      Catégorie <span className="text-red-500">*</span>
+                    </Label>
+                    <select
+                      id="create-category"
+                      {...register("category_id")}
+                      className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/30 focus-visible:ring-offset-2 focus-visible:border-green-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Sélectionner une catégorie</option>
+                      {apiCategories.length > 0
+                        ? apiCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))
+                        : FALLBACK_CATEGORIES.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.label}
+                            </option>
+                          ))}
+                    </select>
+                    {errors.category_id && (
+                      <p className="text-xs text-red-500">{errors.category_id.message}</p>
+                    )}
+                  </div>
+
+                  {/* Organisation */}
+                  {organizations.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="create-org" className="flex items-center gap-2 text-sm font-medium">
+                        <Building2 className="h-3.5 w-3.5 text-zinc-400" />
+                        Organisation <span className="text-red-500">*</span>
+                      </Label>
+                      <select
+                        id="create-org"
+                        {...register("organization_id")}
+                        className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/30 focus-visible:ring-offset-2 focus-visible:border-green-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Sélectionner une organisation</option>
+                        {organizations.map((org) => (
+                          <option key={org.id} value={org.id}>
+                            {org.name}
+                            {org.is_default ? " (par défaut)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.organization_id && (
+                        <p className="text-xs text-red-500">
+                          {errors.organization_id.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCreateModal(false)}
+                      className="flex-1 border-zinc-200 dark:border-zinc-800"
+                      disabled={createProduct.isPending}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg shadow-green-500/20 font-semibold"
+                      disabled={createProduct.isPending || createSuccess}
+                    >
+                      {createProduct.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Création...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Créer le produit
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>,
+          document.body
+        )}
+
+        {/* Modal de détails produit (portail pour passer au-dessus du header) */}
+        {selectedProduct &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+              onClick={() => {
+                setEditingProduct(null);
+                setSelectedProduct(null);
+              }}
+            >
             <Card
               className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
               onClick={(e) => e.stopPropagation()}
@@ -933,19 +1218,8 @@ export default function ProductsPage() {
                 {/* Header du modal */}
                 <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5 backdrop-blur-sm">
                   <div className="flex items-center gap-4">
-                    <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                      {selectedProduct.imageUrl && !imageErrors.has(selectedProduct.id) ? (
-                        <img
-                          src={selectedProduct.imageUrl}
-                          alt={selectedProduct.name}
-                          className="w-full h-full object-cover"
-                          onError={() => handleImageError(selectedProduct.id)}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-zinc-400 dark:text-zinc-600" />
-                        </div>
-                      )}
+                    <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-zinc-900 dark:to-zinc-950 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
+                      <Package className="h-8 w-8 text-zinc-400 dark:text-zinc-600" />
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
@@ -956,188 +1230,203 @@ export default function ProductsPage() {
                       </p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedProduct(null)}
-                    className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  >
-                    <X className="h-5 w-5" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingProduct(selectedProduct)}
+                      className="border-zinc-200 dark:border-zinc-800"
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Modifier
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteProduct(selectedProduct)}
+                      disabled={deleteProduct.isPending}
+                      className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/50"
+                    >
+                      {deleteProduct.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-1" />
+                      )}
+                      Supprimer
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setSelectedProduct(null);
+                      }}
+                      className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Contenu du modal */}
+                {/* Contenu du modal (données API) */}
                 <div className="p-6 space-y-6">
                   {/* Informations principales */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Catégorie et Statut */}
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
                           Catégorie
                         </label>
                         <Badge className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 text-sm font-semibold px-3 py-1.5">
-                          {selectedProduct.category}
-                        </Badge>
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
-                          Statut
-                        </label>
-                        <Badge
-                          className={
-                            selectedProduct.isActive
-                              ? "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 dark:border-green-500/20 text-sm font-semibold px-3 py-1.5"
-                              : "bg-zinc-500/20 text-zinc-700 dark:text-zinc-400 border-zinc-500/30 dark:border-zinc-500/20 text-sm font-semibold px-3 py-1.5"
-                          }
-                        >
-                          {selectedProduct.isActive ? "Actif" : "Inactif"}
+                          {getCategoryName(selectedProduct.category_id, apiCategories)}
                         </Badge>
                       </div>
                     </div>
 
                     {/* Dates */}
                     <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
-                          Date de création
-                        </label>
-                        <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-                          <Calendar className="h-4 w-4 text-zinc-400" />
-                          {new Date(selectedProduct.createdAt).toLocaleDateString("fr-FR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
+                      {selectedProduct.created_at && (
+                        <div>
+                          <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
+                            Date de création
+                          </label>
+                          <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                            <Calendar className="h-4 w-4 text-zinc-400" />
+                            {new Date(selectedProduct.created_at).toLocaleDateString("fr-FR", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
-                          Dernière mise à jour
-                        </label>
-                        <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
-                          <Calendar className="h-4 w-4 text-zinc-400" />
-                          {new Date(selectedProduct.updatedAt).toLocaleDateString("fr-FR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
+                      )}
+                      {selectedProduct.updated_at && (
+                        <div>
+                          <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
+                            Dernière mise à jour
+                          </label>
+                          <div className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+                            <Calendar className="h-4 w-4 text-zinc-400" />
+                            {new Date(selectedProduct.updated_at).toLocaleDateString("fr-FR", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Prix et Marge */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900/50 dark:to-zinc-900/30 border-zinc-200 dark:border-zinc-800">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <DollarSign className="h-4 w-4 text-zinc-500" />
-                          <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-                            Prix d'achat
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                          {formatPrice(selectedProduct.cost || 0)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5 border-green-500/20 dark:border-green-500/10">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="h-4 w-4 text-green-500" />
-                          <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-                            Prix de vente
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent dark:from-green-400 dark:to-emerald-400">
-                          {formatPrice(selectedProduct.price)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 dark:from-blue-500/5 dark:to-cyan-500/5 border-blue-500/20 dark:border-blue-500/10">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Activity className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-                            Marge
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-cyan-400">
-                          {calculateMargin(selectedProduct).toFixed(1)}%
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Stock */}
-                  <Card
-                    className={`${
-                      selectedProduct.minStock &&
-                      selectedProduct.stock <= selectedProduct.minStock
-                        ? "bg-gradient-to-br from-yellow-500/10 to-amber-500/10 dark:from-yellow-500/5 dark:to-amber-500/5 border-yellow-500/20 dark:border-yellow-500/10"
-                        : "bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900/50 dark:to-zinc-900/30 border-zinc-200 dark:border-zinc-800"
-                    }`}
-                  >
+                  {/* Prix de vente */}
+                  <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 dark:from-green-500/5 dark:to-emerald-500/5 border-green-500/20 dark:border-green-500/10">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Package className="h-4 w-4 text-zinc-500" />
-                            <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-                              Stock actuel
-                            </span>
-                            {selectedProduct.minStock &&
-                              selectedProduct.stock <= selectedProduct.minStock && (
-                                <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500 animate-pulse" />
-                              )}
-                          </div>
-                          <p
-                            className={`text-2xl font-bold ${
-                              selectedProduct.minStock &&
-                              selectedProduct.stock <= selectedProduct.minStock
-                                ? "text-yellow-600 dark:text-yellow-500"
-                                : "text-zinc-900 dark:text-zinc-100"
-                            }`}
-                          >
-                            {selectedProduct.stock} unités
-                          </p>
-                        </div>
-                        <div className="text-right space-y-1">
-                          {selectedProduct.minStock && (
-                            <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                              Stock minimum: {selectedProduct.minStock}
-                            </div>
-                          )}
-                          {selectedProduct.maxStock && (
-                            <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                              Stock maximum: {selectedProduct.maxStock}
-                            </div>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
+                          Prix de vente
+                        </span>
                       </div>
+                      <p className="text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent dark:from-green-400 dark:to-emerald-400">
+                        {formatPrice(selectedProduct.price)}
+                      </p>
                     </CardContent>
                   </Card>
 
-                  {/* Description */}
-                  {selectedProduct.description && (
-                    <div>
-                      <label className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mb-2 block">
-                        Description
-                      </label>
-                      <Card className="bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-900/50 dark:to-zinc-900/30 border-zinc-200 dark:border-zinc-800">
-                        <CardContent className="p-4">
-                          <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                            {selectedProduct.description}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
+                  {/* Formulaire d'édition */}
+                  {editingProduct?.id === selectedProduct.id && (
+                    <Card className="border-green-500/30 dark:border-green-500/20">
+                      <CardContent className="p-4">
+                        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-4">
+                          Modifier le produit
+                        </h3>
+                        <form onSubmit={onSubmitEdit} className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium">Nom</Label>
+                              <Input
+                                {...registerEdit("name")}
+                                className="h-9"
+                              />
+                              {errorsEdit.name && (
+                                <p className="text-xs text-red-500">{errorsEdit.name.message}</p>
+                              )}
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium">SKU</Label>
+                              <Input
+                                {...registerEdit("sku")}
+                                className="h-9 font-mono"
+                              />
+                              {errorsEdit.sku && (
+                                <p className="text-xs text-red-500">{errorsEdit.sku.message}</p>
+                              )}
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium">Prix (FCFA)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                {...registerEdit("price", { valueAsNumber: true })}
+                                className="h-9"
+                              />
+                              {errorsEdit.price && (
+                                <p className="text-xs text-red-500">{errorsEdit.price.message}</p>
+                              )}
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium">Catégorie</Label>
+                              <select
+                                {...registerEdit("category_id")}
+                                className="flex h-9 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm"
+                              >
+                                {apiCategories.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>
+                                    {cat.name}
+                                  </option>
+                                ))}
+                              </select>
+                              {errorsEdit.category_id && (
+                                <p className="text-xs text-red-500">{errorsEdit.category_id.message}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingProduct(null)}
+                              className="border-zinc-200 dark:border-zinc-800"
+                            >
+                              Annuler
+                            </Button>
+                            <Button
+                              type="submit"
+                              size="sm"
+                              disabled={updateProduct.isPending}
+                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                            >
+                              {updateProduct.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : null}
+                              Enregistrer
+                            </Button>
+                          </div>
+                          {updateProduct.error && (
+                            <p className="text-xs text-red-500">
+                              {(updateProduct.error as { message?: string })?.message ?? "Erreur lors de la mise à jour"}
+                            </p>
+                          )}
+                        </form>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

@@ -6,10 +6,6 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent } from "@/shared/ui/card";
-import { Button } from "@/shared/ui/button";
-import { Input } from "@/shared/ui/input";
-import { Label } from "@/shared/ui/label";
 import {
   useTenantId,
   useSelectedOrganizationId,
@@ -17,15 +13,19 @@ import {
 } from "@/shared/tenant/store";
 import { useOrganizations } from "@/shared/organizations/hooks";
 import {
-  useCustomers,
-  useCreateCustomer,
-  useUpdateCustomer,
-  useDeleteCustomer,
-} from "@/shared/customers/hooks";
+  useDrivers,
+  useCreateDriver,
+  useUpdateDriver,
+  useDeleteDriver,
+} from "@/shared/drivers/hooks";
+import type { Driver } from "@/shared/drivers/hooks";
 import { extractApiError } from "@/shared/api/axios";
-import type { Customer } from "@/shared/customers/hooks";
+import { Card, CardContent } from "@/shared/ui/card";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { Label } from "@/shared/ui/label";
 import {
-  Users,
+  UserCircle,
   Plus,
   Search,
   X,
@@ -33,47 +33,55 @@ import {
   CheckCircle2,
   Loader2,
   Phone,
+  Car,
+  Hash,
   Building2,
   ExternalLink,
   Pencil,
   Trash2,
 } from "lucide-react";
 
-// ─── Schémas de validation ───────────────────────────────────────────────────
-
-const createCustomerSchema = z.object({
-  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
+const createDriverSchema = z.object({
+  first_name: z.string().min(2, "Le prénom doit comporter au moins 2 caractères"),
+  last_name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
   phone: z.string().min(1, "Le téléphone est requis"),
-  organization_id: z
-    .string()
-    .min(1, "Veuillez sélectionner une organisation"),
+  vehicle_type: z.string().optional(),
+  vehicle_plate: z.string().optional(),
+  organization_id: z.string().min(1, "Veuillez sélectionner une organisation"),
+  is_active: z.boolean().optional(),
 });
 
-const updateCustomerSchema = z.object({
-  name: z.string().min(2, "Le nom doit comporter au moins 2 caractères").optional(),
-  phone: z.string().min(1, "Le téléphone est requis").optional(),
+type CreateDriverFormValues = z.infer<typeof createDriverSchema>;
+
+const updateDriverSchema = z.object({
+  first_name: z.string().min(2).optional(),
+  last_name: z.string().min(2).optional(),
+  phone: z.string().min(1).optional(),
+  vehicle_type: z.string().optional(),
+  vehicle_plate: z.string().optional(),
   organization_id: z.string().optional(),
+  is_active: z.boolean().optional(),
 });
 
-type CreateCustomerFormValues = z.infer<typeof createCustomerSchema>;
-type UpdateCustomerFormValues = z.infer<typeof updateCustomerSchema>;
+type UpdateDriverFormValues = z.infer<typeof updateDriverSchema>;
 
-// ─── Composant principal ──────────────────────────────────────────────────────
+function driverDisplayName(d: Driver) {
+  return [d.first_name, d.last_name].filter(Boolean).join(" ") || d.id;
+}
 
-export default function CustomersPage() {
+export default function DeliveryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const tenantId = useTenantId();
   const persistedOrgId = useSelectedOrganizationId(tenantId ?? undefined);
   const setSelectedOrganizationId = useSetSelectedOrganizationId();
   const { data: organizations = [] } = useOrganizations(tenantId);
-  const defaultOrg =
-    organizations.find((o) => o.is_default) ?? organizations[0];
+  const defaultOrg = organizations.find((o) => o.is_default) ?? organizations[0];
 
   const {
     register,
@@ -82,21 +90,16 @@ export default function CustomersPage() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<CreateCustomerFormValues>({
-    resolver: zodResolver(createCustomerSchema),
+  } = useForm<CreateDriverFormValues>({
+    resolver: zodResolver(createDriverSchema),
     defaultValues: {
-      name: "",
+      first_name: "",
+      last_name: "",
       phone: "",
+      vehicle_type: "",
+      vehicle_plate: "",
       organization_id: "",
-    },
-  });
-
-  const updateForm = useForm<UpdateCustomerFormValues>({
-    resolver: zodResolver(updateCustomerSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-      organization_id: "",
+      is_active: true,
     },
   });
 
@@ -108,7 +111,7 @@ export default function CustomersPage() {
     if (initialOrgId) setValue("organization_id", initialOrgId);
   }, [tenantId, organizations, persistedOrgId, defaultOrg?.id, setValue]);
 
-  const selectedOrgId = watch("organization_id");
+  const selectedOrgId = watch("organization_id") || persistedOrgId || defaultOrg?.id;
 
   useEffect(() => {
     if (tenantId && selectedOrgId) {
@@ -116,21 +119,38 @@ export default function CustomersPage() {
     }
   }, [tenantId, selectedOrgId, setSelectedOrganizationId]);
 
-  const { data: customers = [], isLoading, error } = useCustomers(
+  const { data: drivers = [], isLoading, error } = useDrivers(
     tenantId,
-    selectedOrgId || defaultOrg?.id
+    selectedOrgId || undefined
   );
 
-  const createCustomer = useCreateCustomer(tenantId, selectedOrgId);
-  const updateCustomer = useUpdateCustomer(tenantId, selectedOrgId);
-  const deleteCustomer = useDeleteCustomer(tenantId, selectedOrgId);
+  const updateForm = useForm<UpdateDriverFormValues>({
+    resolver: zodResolver(updateDriverSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      phone: "",
+      vehicle_type: "",
+      vehicle_plate: "",
+      organization_id: "",
+      is_active: true,
+    },
+  });
+
+  const createDriver = useCreateDriver(tenantId, selectedOrgId || undefined);
+  const updateDriver = useUpdateDriver(tenantId, selectedOrgId || undefined);
+  const deleteDriver = useDeleteDriver(tenantId, selectedOrgId || undefined);
 
   const onSubmitCreate = handleSubmit(async (values) => {
-    await createCustomer.mutateAsync(
+    await createDriver.mutateAsync(
       {
-        name: values.name,
+        first_name: values.first_name,
+        last_name: values.last_name,
         phone: values.phone,
+        vehicle_type: values.vehicle_type || undefined,
+        vehicle_plate: values.vehicle_plate || undefined,
         organization_id: values.organization_id,
+        is_active: values.is_active ?? true,
       },
       {
         onSuccess: () => {
@@ -147,54 +167,61 @@ export default function CustomersPage() {
   });
 
   const onSubmitUpdate = updateForm.handleSubmit(async (values) => {
-    if (!editingCustomer) return;
-    await updateCustomer.mutateAsync(
+    if (!editingDriver) return;
+    await updateDriver.mutateAsync(
       {
-        id: editingCustomer.id,
-        ...(values.name && { name: values.name }),
+        id: editingDriver.id,
+        ...(values.first_name && { first_name: values.first_name }),
+        ...(values.last_name && { last_name: values.last_name }),
         ...(values.phone !== undefined && { phone: values.phone }),
-        ...(values.organization_id && {
-          organization_id: values.organization_id,
-        }),
+        ...(values.vehicle_type !== undefined && { vehicle_type: values.vehicle_type }),
+        ...(values.vehicle_plate !== undefined && { vehicle_plate: values.vehicle_plate }),
+        ...(values.organization_id && { organization_id: values.organization_id }),
+        ...(values.is_active !== undefined && { is_active: values.is_active }),
       },
       {
         onSuccess: () => {
-          setEditingCustomer(null);
+          setEditingDriver(null);
         },
       }
     );
   });
 
-  const handleDelete = async (customer: Customer) => {
-    if (!confirm(`Supprimer le client « ${customer.name} » ?`)) return;
-    setDeletingId(customer.id);
-    await deleteCustomer.mutateAsync(customer.id, {
+  const handleDelete = async (driver: Driver) => {
+    if (!confirm(`Supprimer le livreur « ${driverDisplayName(driver)} » ?`)) return;
+    setDeletingId(driver.id);
+    await deleteDriver.mutateAsync(driver.id, {
       onSettled: () => setDeletingId(null),
-      onSuccess: () => setSelectedCustomer(null),
+      onSuccess: () => setSelectedDriver(null),
     });
   };
 
   useEffect(() => {
-    if (editingCustomer) {
+    if (editingDriver) {
       updateForm.reset({
-        name: editingCustomer.name,
-        phone: editingCustomer.phone,
-        organization_id: editingCustomer.organization_id,
+        first_name: editingDriver.first_name,
+        last_name: editingDriver.last_name,
+        phone: editingDriver.phone ?? "",
+        vehicle_type: editingDriver.vehicle_type ?? "",
+        vehicle_plate: editingDriver.vehicle_plate ?? "",
+        organization_id: editingDriver.organization_id ?? "",
+        is_active: editingDriver.is_active ?? true,
       });
     }
-  }, [editingCustomer, updateForm]);
+  }, [editingDriver, updateForm]);
 
   const canSubmitCreate =
     !!selectedOrgId &&
     !!tenantId &&
-    !createCustomer.isPending &&
+    !createDriver.isPending &&
     !createSuccess;
   const showNoOrgMessage = organizations.length === 0 || !selectedOrgId;
 
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.phone && c.phone.includes(searchQuery))
+  const filtered = drivers.filter(
+    (d) =>
+      driverDisplayName(d).toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (d.phone && d.phone.includes(searchQuery)) ||
+      (d.vehicle_plate && d.vehicle_plate.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   if (isLoading) {
@@ -202,10 +229,10 @@ export default function CustomersPage() {
       <div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 dark:from-black dark:via-zinc-950 dark:to-black">
         <div className="text-center space-y-4">
           <div className="relative">
-            <div className="h-16 w-16 animate-spin rounded-full border-4 border-emerald-500/20 border-t-emerald-500 mx-auto" />
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500 mx-auto" />
           </div>
-          <p className="text-lg font-semibold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
-            Chargement des clients...
+          <p className="text-lg font-semibold bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">
+            Chargement des livreurs...
           </p>
         </div>
       </div>
@@ -227,11 +254,11 @@ export default function CustomersPage() {
               <p className="text-sm text-zinc-500 mb-6">
                 {error instanceof Error
                   ? error.message
-                  : "Une erreur est survenue lors du chargement des clients"}
+                  : "Une erreur est survenue lors du chargement des livreurs"}
               </p>
               <Button
                 onClick={() => window.location.reload()}
-                className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+                className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white"
               >
                 Réessayer
               </Button>
@@ -245,8 +272,8 @@ export default function CustomersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-black dark:via-zinc-950 dark:to-black p-6 lg:p-8 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl animate-pulse delay-1000" />
       </div>
 
       <div className="relative z-10">
@@ -254,55 +281,55 @@ export default function CustomersPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
             <div className="flex items-center gap-4">
               <div className="relative group">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-500/30 to-teal-600/30 blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
-                <div className="relative h-16 w-16 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-600/20 p-3 shadow-2xl shadow-emerald-500/20 ring-2 ring-emerald-500/20 group-hover:scale-105 transition-transform duration-300">
-                  <Users className="h-full w-full text-emerald-400 dark:text-emerald-500" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-500/30 to-cyan-600/30 blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
+                <div className="relative h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-600/20 p-3 shadow-2xl shadow-blue-500/20 ring-2 ring-blue-500/20 group-hover:scale-105 transition-transform duration-300">
+                  <UserCircle className="h-full w-full text-blue-400 dark:text-blue-500" />
                 </div>
               </div>
               <div>
-                <h1 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 bg-clip-text text-transparent mb-2 tracking-tight">
-                  Clients
+                <h1 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2 tracking-tight">
+                  Livreurs
                 </h1>
                 <p className="text-zinc-500 text-sm lg:text-base dark:text-zinc-400 font-medium">
-                  Gérez vos clients
+                  Gérez vos chauffeurs et livraisons
                 </p>
               </div>
             </div>
             <Button
               onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 px-6 py-2.5 font-semibold transition-all duration-200 hover:scale-105 group"
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white shadow-lg shadow-blue-500/20 px-6 py-2.5 font-semibold transition-all duration-200 hover:scale-105 group"
             >
               <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
-              Nouveau client
+              Nouveau livreur
             </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-emerald-500/40 transition-all duration-500 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-blue-500/40 transition-all duration-500 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
               <CardContent className="p-4 relative z-10">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20">
-                    <Users className="h-4 w-4 text-emerald-500" />
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
+                    <UserCircle className="h-4 w-4 text-blue-500" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent mb-1">
-                  {customers.length}
+                <div className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent mb-1">
+                  {drivers.length}
                 </div>
                 <p className="text-xs text-zinc-500 font-medium">
-                  Clients au total
+                  Livreurs au total
                 </p>
               </CardContent>
             </Card>
           </div>
 
           <div className="relative group mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-emerald-500 transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-blue-500 transition-colors" />
             <Input
               type="text"
-              placeholder="Rechercher par nom ou téléphone..."
+              placeholder="Rechercher par nom, téléphone ou plaque..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-12 h-14 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-zinc-200/80 dark:border-zinc-800/80 focus:border-emerald-500 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-base shadow-lg transition-all duration-300"
+              className="pl-12 pr-12 h-14 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-zinc-200/80 dark:border-zinc-800/80 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 text-base shadow-lg transition-all duration-300"
             />
             {searchQuery && (
               <button
@@ -319,26 +346,26 @@ export default function CustomersPage() {
           <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-xl">
             <CardContent className="p-16 text-center">
               <div className="relative inline-block mb-6">
-                <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl animate-pulse" />
-                <div className="relative p-6 rounded-full bg-gradient-to-br from-emerald-500/10 to-teal-500/10">
-                  <Users className="h-16 w-16 text-zinc-400 dark:text-zinc-600" />
+                <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-2xl animate-pulse" />
+                <div className="relative p-6 rounded-full bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
+                  <UserCircle className="h-16 w-16 text-zinc-400 dark:text-zinc-600" />
                 </div>
               </div>
               <p className="text-xl font-bold text-zinc-700 dark:text-zinc-300 mb-2">
-                Aucun client trouvé
+                Aucun livreur trouvé
               </p>
               <p className="text-sm text-zinc-500 mb-6">
                 {searchQuery
                   ? "Essayez de modifier votre recherche"
-                  : "Commencez par créer votre premier client"}
+                  : "Aucun livreur enregistré pour cette organisation."}
               </p>
               {!searchQuery && (
                 <Button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
+                  className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouveau client
+                  Nouveau livreur
                 </Button>
               )}
             </CardContent>
@@ -357,7 +384,10 @@ export default function CustomersPage() {
                         Téléphone
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Organisation
+                        Véhicule
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
+                        Statut
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
                         Actions
@@ -365,46 +395,65 @@ export default function CustomersPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-900/50">
-                    {filtered.map((customer) => (
+                    {filtered.map((driver) => (
                       <tr
-                        key={customer.id}
-                        className="group hover:bg-gradient-to-r hover:from-emerald-500/5 hover:to-teal-500/5 transition-all duration-300"
+                        key={driver.id}
+                        className="group hover:bg-gradient-to-r hover:from-blue-500/5 hover:to-cyan-500/5 transition-all duration-300"
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="p-1.5 rounded-md bg-emerald-500/15">
-                              <Users className="h-3.5 w-3.5 text-emerald-500" />
+                            <div className="p-1.5 rounded-md bg-blue-500/15">
+                              <UserCircle className="h-3.5 w-3.5 text-blue-500" />
                             </div>
                             <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                              {customer.name}
+                              {driverDisplayName(driver)}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-zinc-400" />
-                            {customer.phone || "—"}
-                          </span>
+                          {driver.phone ? (
+                            <span className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+                              <Phone className="h-3.5 w-3.5 text-zinc-400" />
+                              {driver.phone}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-zinc-400">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                            {organizations.find((o) => o.id === customer.organization_id)
-                              ?.name ?? customer.organization_id}
+                          {driver.vehicle_type || driver.vehicle_plate ? (
+                            <span className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
+                              <Car className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+                              {[driver.vehicle_type, driver.vehicle_plate].filter(Boolean).join(" · ") || "—"}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-zinc-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              driver.is_active !== false
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400"
+                            }`}
+                          >
+                            {driver.is_active !== false ? "Actif" : "Inactif"}
                           </span>
                         </td>
                         <td className="px-6 py-4 flex items-center gap-2">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedCustomer(customer)}
-                            className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+                            onClick={() => setSelectedDriver(driver)}
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:bg-blue-500/10"
                           >
                             Voir
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setEditingCustomer(customer)}
+                            onClick={() => setEditingDriver(driver)}
                             className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -412,11 +461,11 @@ export default function CustomersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(customer)}
-                            disabled={deletingId === customer.id}
+                            onClick={() => handleDelete(driver)}
+                            disabled={deletingId === driver.id}
                             className="text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-500/10"
                           >
-                            {deletingId === customer.id ? (
+                            {deletingId === driver.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
                             ) : (
                               <Trash2 className="h-3.5 w-3.5" />
@@ -432,32 +481,32 @@ export default function CustomersPage() {
           </Card>
         )}
 
-        {/* Modal détail */}
-        {selectedCustomer &&
+        {/* Modal détail livreur */}
+        {selectedDriver &&
           typeof document !== "undefined" &&
           createPortal(
             <div
               className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-              onClick={() => setSelectedCustomer(null)}
+              onClick={() => setSelectedDriver(null)}
             >
               <Card
                 className="relative w-full max-w-lg bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
                 onClick={(e) => e.stopPropagation()}
               >
                 <CardContent className="p-0">
-                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-xl">
+                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-t-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-emerald-500/20">
-                        <Users className="h-5 w-5 text-emerald-500" />
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        <UserCircle className="h-5 w-5 text-blue-500" />
                       </div>
                       <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                        {selectedCustomer.name}
+                        {driverDisplayName(selectedDriver)}
                       </h2>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setSelectedCustomer(null)}
+                      onClick={() => setSelectedDriver(null)}
                       className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     >
                       <X className="h-5 w-5" />
@@ -466,21 +515,33 @@ export default function CustomersPage() {
                   <div className="p-6 space-y-4">
                     <DetailRow
                       label="Téléphone"
-                      value={selectedCustomer.phone || "—"}
+                      value={selectedDriver.phone || "—"}
+                    />
+                    <DetailRow
+                      label="Type de véhicule"
+                      value={selectedDriver.vehicle_type || "—"}
+                    />
+                    <DetailRow
+                      label="Plaque"
+                      value={selectedDriver.vehicle_plate || "—"}
                     />
                     <DetailRow
                       label="Organisation"
                       value={
                         organizations.find(
-                          (o) => o.id === selectedCustomer.organization_id
-                        )?.name ?? selectedCustomer.organization_id
+                          (o) => o.id === selectedDriver.organization_id
+                        )?.name ?? selectedDriver.organization_id
                       }
                     />
-                    {selectedCustomer.created_at && (
+                    <DetailRow
+                      label="Statut"
+                      value={selectedDriver.is_active !== false ? "Actif" : "Inactif"}
+                    />
+                    {selectedDriver.created_at && (
                       <DetailRow
                         label="Créé le"
                         value={new Date(
-                          selectedCustomer.created_at
+                          selectedDriver.created_at
                         ).toLocaleDateString("fr-FR", {
                           year: "numeric",
                           month: "long",
@@ -494,8 +555,8 @@ export default function CustomersPage() {
                       variant="outline"
                       className="flex-1"
                       onClick={() => {
-                        setEditingCustomer(selectedCustomer);
-                        setSelectedCustomer(null);
+                        setEditingDriver(selectedDriver);
+                        setSelectedDriver(null);
                       }}
                     >
                       <Pencil className="h-4 w-4 mr-2" />
@@ -504,10 +565,10 @@ export default function CustomersPage() {
                     <Button
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/50"
-                      onClick={() => handleDelete(selectedCustomer)}
-                      disabled={deletingId === selectedCustomer.id}
+                      onClick={() => handleDelete(selectedDriver)}
+                      disabled={deletingId === selectedDriver.id}
                     >
-                      {deletingId === selectedCustomer.id ? (
+                      {deletingId === selectedDriver.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Trash2 className="h-4 w-4 mr-2" />
@@ -521,7 +582,7 @@ export default function CustomersPage() {
             document.body
           )}
 
-        {/* Modal création */}
+        {/* Modal création livreur */}
         {showCreateModal &&
           typeof document !== "undefined" &&
           createPortal(
@@ -534,17 +595,17 @@ export default function CustomersPage() {
                 onClick={(e) => e.stopPropagation()}
               >
                 <CardContent className="p-0">
-                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-xl">
+                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-t-xl">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-emerald-500/20">
-                        <Users className="h-5 w-5 text-emerald-500" />
+                      <div className="p-2 rounded-lg bg-blue-500/20">
+                        <UserCircle className="h-5 w-5 text-blue-500" />
                       </div>
                       <div>
                         <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                          Nouveau client
+                          Nouveau livreur
                         </h2>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          Nom, téléphone et organisation
+                          Prénom, nom, téléphone, véhicule et organisation
                         </p>
                       </div>
                     </div>
@@ -562,21 +623,21 @@ export default function CustomersPage() {
                     <div className="mx-6 mt-5 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-800 dark:text-emerald-200">
                       <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
                       <span className="font-semibold">
-                        Client créé avec succès !
+                        Livreur créé avec succès !
                       </span>
                     </div>
                   )}
 
-                  {createCustomer.error && !createSuccess && (
+                  {createDriver.error && !createSuccess && (
                     <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-300">
                       <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                       <span>
-                        {extractApiError(createCustomer.error).message}
+                        {extractApiError(createDriver.error).message}
                       </span>
                     </div>
                   )}
 
-                  {showNoOrgMessage && !createCustomer.error && (
+                  {showNoOrgMessage && !createDriver.error && (
                     <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-200">
                       <Building2 className="h-5 w-5 shrink-0 mt-0.5" />
                       <div>
@@ -599,45 +660,90 @@ export default function CustomersPage() {
                   )}
 
                   <form onSubmit={onSubmitCreate} className="p-6 space-y-5">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="cust-name" className="flex items-center gap-2 text-sm font-medium">
-                        Nom <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="cust-name"
-                        placeholder="ex: Jean Dupont"
-                        {...register("name")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                      />
-                      {errors.name && (
-                        <p className="text-xs text-red-500">{errors.name.message}</p>
-                      )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dr-first-name" className="flex items-center gap-2 text-sm font-medium">
+                          Prénom <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="dr-first-name"
+                          placeholder="ex: Jean"
+                          {...register("first_name")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                        {errors.first_name && (
+                          <p className="text-xs text-red-500">{errors.first_name.message}</p>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dr-last-name" className="flex items-center gap-2 text-sm font-medium">
+                          Nom <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="dr-last-name"
+                          placeholder="ex: Kouassi"
+                          {...register("last_name")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                        {errors.last_name && (
+                          <p className="text-xs text-red-500">{errors.last_name.message}</p>
+                        )}
+                      </div>
                     </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="cust-phone" className="flex items-center gap-2 text-sm font-medium">
+                      <Label htmlFor="dr-phone" className="flex items-center gap-2 text-sm font-medium">
                         <Phone className="h-3.5 w-3.5 text-zinc-400" />
                         Téléphone <span className="text-red-500">*</span>
                       </Label>
                       <Input
-                        id="cust-phone"
-                        placeholder="ex: +33 6 12 34 56 78"
+                        id="dr-phone"
+                        placeholder="ex: +225 07 00 00 00 00"
                         {...register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                       />
                       {errors.phone && (
                         <p className="text-xs text-red-500">{errors.phone.message}</p>
                       )}
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dr-vehicle-type" className="flex items-center gap-2 text-sm font-medium">
+                          <Car className="h-3.5 w-3.5 text-zinc-400" />
+                          Type de véhicule
+                        </Label>
+                        <Input
+                          id="dr-vehicle-type"
+                          placeholder="ex: Moto, Camion"
+                          {...register("vehicle_type")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="dr-vehicle-plate" className="flex items-center gap-2 text-sm font-medium">
+                          <Hash className="h-3.5 w-3.5 text-zinc-400" />
+                          Plaque
+                        </Label>
+                        <Input
+                          id="dr-vehicle-plate"
+                          placeholder="ex: CI-1234-AB"
+                          {...register("vehicle_plate")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                      </div>
+                    </div>
+
                     {organizations.length > 0 && (
                       <div className="space-y-1.5">
-                        <Label htmlFor="cust-org" className="flex items-center gap-2 text-sm font-medium">
+                        <Label htmlFor="dr-org" className="flex items-center gap-2 text-sm font-medium">
                           <Building2 className="h-3.5 w-3.5 text-zinc-400" />
                           Organisation <span className="text-red-500">*</span>
                         </Label>
                         <select
-                          id="cust-org"
+                          id="dr-org"
                           {...register("organization_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50"
+                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-500/50"
                         >
                           <option value="">Sélectionner une organisation</option>
                           {organizations.map((org) => (
@@ -654,22 +760,35 @@ export default function CustomersPage() {
                         )}
                       </div>
                     )}
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="dr-is-active"
+                        {...register("is_active")}
+                        className="h-4 w-4 rounded border-zinc-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <Label htmlFor="dr-is-active" className="text-sm font-medium cursor-pointer">
+                        Livreur actif
+                      </Label>
+                    </div>
+
                     <div className="flex gap-3 pt-2">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setShowCreateModal(false)}
                         className="flex-1 border-zinc-200 dark:border-zinc-800"
-                        disabled={createCustomer.isPending}
+                        disabled={createDriver.isPending}
                       >
                         Annuler
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 font-semibold"
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white shadow-lg shadow-blue-500/20 font-semibold"
                         disabled={!canSubmitCreate}
                       >
-                        {createCustomer.isPending ? (
+                        {createDriver.isPending ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Création...
@@ -677,7 +796,7 @@ export default function CustomersPage() {
                         ) : (
                           <>
                             <Plus className="h-4 w-4 mr-2" />
-                            Créer le client
+                            Créer le livreur
                           </>
                         )}
                       </Button>
@@ -689,51 +808,65 @@ export default function CustomersPage() {
             document.body
           )}
 
-        {/* Modal modification */}
-        {editingCustomer &&
+        {/* Modal modification livreur */}
+        {editingDriver &&
           typeof document !== "undefined" &&
           createPortal(
             <div
               className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
-              onClick={() => setEditingCustomer(null)}
+              onClick={() => setEditingDriver(null)}
             >
               <Card
-                className="relative w-full max-w-lg bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
+                className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
                 onClick={(e) => e.stopPropagation()}
               >
                 <CardContent className="p-0">
-                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-xl">
+                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-t-xl">
                     <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                      Modifier le client
+                      Modifier le livreur
                     </h2>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setEditingCustomer(null)}
+                      onClick={() => setEditingDriver(null)}
                     >
                       <X className="h-5 w-5" />
                     </Button>
                   </div>
-                  {updateCustomer.error && (
+                  {updateDriver.error && (
                     <div className="mx-6 mt-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700 dark:text-red-300">
                       <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                       <span>
-                        {extractApiError(updateCustomer.error).message}
+                        {extractApiError(updateDriver.error).message}
                       </span>
                     </div>
                   )}
                   <form onSubmit={onSubmitUpdate} className="p-6 space-y-5">
-                    <div className="space-y-1.5">
-                      <Label>Nom</Label>
-                      <Input
-                        {...updateForm.register("name")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-                      />
-                      {updateForm.formState.errors.name && (
-                        <p className="text-xs text-red-500">
-                          {updateForm.formState.errors.name.message}
-                        </p>
-                      )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label>Prénom</Label>
+                        <Input
+                          {...updateForm.register("first_name")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                        />
+                        {updateForm.formState.errors.first_name && (
+                          <p className="text-xs text-red-500">
+                            {updateForm.formState.errors.first_name.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Nom</Label>
+                        <Input
+                          {...updateForm.register("last_name")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                        />
+                        {updateForm.formState.errors.last_name && (
+                          <p className="text-xs text-red-500">
+                            {updateForm.formState.errors.last_name.message}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <Label>Téléphone</Label>
@@ -746,6 +879,22 @@ export default function CustomersPage() {
                           {updateForm.formState.errors.phone.message}
                         </p>
                       )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label>Type de véhicule</Label>
+                        <Input
+                          {...updateForm.register("vehicle_type")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Plaque</Label>
+                        <Input
+                          {...updateForm.register("vehicle_plate")}
+                          className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                        />
+                      </div>
                     </div>
                     {organizations.length > 0 && (
                       <div className="space-y-1.5">
@@ -763,22 +912,32 @@ export default function CustomersPage() {
                         </select>
                       </div>
                     )}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        {...updateForm.register("is_active")}
+                        className="h-4 w-4 rounded border-zinc-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <Label className="text-sm font-medium cursor-pointer">
+                        Livreur actif
+                      </Label>
+                    </div>
                     <div className="flex gap-3 pt-2">
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setEditingCustomer(null)}
+                        onClick={() => setEditingDriver(null)}
                         className="flex-1"
-                        disabled={updateCustomer.isPending}
+                        disabled={updateDriver.isPending}
                       >
                         Annuler
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-600 text-white"
-                        disabled={updateCustomer.isPending}
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 text-white"
+                        disabled={updateDriver.isPending}
                       >
-                        {updateCustomer.isPending ? (
+                        {updateDriver.isPending ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : null}
                         Enregistrer

@@ -185,22 +185,22 @@ function ScreenshotsCarousel() {
     {
       title: "Dashboard intuitif",
       description: "Vue d'ensemble de votre business en un coup d'œil",
-      gradient: "from-blue-500 to-purple-600",
+      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
     },
     {
       title: "Gestion COD simplifiée",
       description: "Suivez tous vos colis en temps réel",
-      gradient: "from-green-500 to-teal-600",
+      image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&q=80",
     },
     {
       title: "Analytics avancés",
       description: "Rapports détaillés et insights pertinents",
-      gradient: "from-orange-500 to-red-600",
+      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
     },
     {
       title: "Gestion de stock",
       description: "Stock en temps réel avec alertes automatiques",
-      gradient: "from-pink-500 to-rose-600",
+      image: "https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80",
     },
   ];
 
@@ -211,12 +211,18 @@ function ScreenshotsCarousel() {
           {screenshots.map((screenshot, index) => (
             <div key={index} className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_40%] min-w-0 pl-4">
               <Card className="overflow-hidden group cursor-pointer border-2 hover:border-primary/50 transition-all duration-300">
-                <div className={`h-64 bg-gradient-to-br ${screenshot.gradient} flex items-center justify-center relative overflow-hidden`}>
-                  <Monitor className="h-32 w-32 text-white/20" />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300" />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-                    <h4 className="text-white font-bold text-lg mb-1">{screenshot.title}</h4>
-                    <p className="text-white/80 text-sm">{screenshot.description}</p>
+                <div className="relative h-64 overflow-hidden bg-muted">
+                  <Image
+                    src={screenshot.image}
+                    alt={screenshot.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, 50vw, 40vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <h4 className="text-white font-bold text-lg mb-1 drop-shadow-md">{screenshot.title}</h4>
+                    <p className="text-white/90 text-sm drop-shadow-md">{screenshot.description}</p>
                   </div>
                 </div>
               </Card>

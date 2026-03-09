@@ -30,7 +30,7 @@ export default function TenantRequiredPage() {
           </div>
           <CardTitle className="text-3xl font-bold">Organisation requise</CardTitle>
           <CardDescription className="text-lg mt-2">
-            Pour accéder à cette page, vous devez être connecté à une organisation
+            Pour accéder au tableau de bord, une organisation doit être associée à votre accès.
           </CardDescription>
         </CardHeader>
         
@@ -43,10 +43,10 @@ export default function TenantRequiredPage() {
                   <Sparkles className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                   <div>
                     <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                      Mode Développement - Connexion Rapide
+                      Mode développement — Connexion rapide
                     </h3>
                     <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-                      En mode mock, connectez-vous avec ces identifiants pour accéder automatiquement :
+                      Connectez-vous avec l’un des comptes ci-dessous : une organisation de démonstration sera chargée automatiquement.
                     </p>
                     
                     <div className="space-y-3">
@@ -85,7 +85,7 @@ export default function TenantRequiredPage() {
               {/* Instructions */}
               <div className="text-center space-y-4">
                 <p className="text-muted-foreground">
-                  Une fois connecté, vous aurez accès à toutes les fonctionnalités sans besoin de sous-domaine.
+                  Après connexion, vous pourrez choisir ou créer une organisation et accéder au tableau de bord.
                 </p>
                 <Link href="/login">
                   <Button size="lg" className="w-full sm:w-auto">
@@ -102,26 +102,26 @@ export default function TenantRequiredPage() {
               <div className="space-y-4">
                 <div className="rounded-lg bg-zinc-100 dark:bg-zinc-800 p-4">
                   <p className="text-sm text-muted-foreground mb-3">
-                    Pour accéder à cette page, vous devez utiliser votre sous-domaine :
+                    Utilisez l’URL de votre organisation (sous-domaine) :
                   </p>
                   <code className="block p-3 bg-zinc-900 dark:bg-zinc-950 text-green-400 rounded text-sm font-mono">
-                    votre-tenant.localhost:3000
+                    nom-org.localhost:3000
                   </code>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold">En développement :</h4>
+                  <h4 className="font-semibold">En développement</h4>
                   <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
-                    <li>Utilisez un sous-domaine comme <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">tenant1.localhost:3000</code></li>
-                    <li>Ajoutez dans votre fichier hosts : <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">127.0.0.1 tenant1.localhost</code></li>
+                    <li>Exemples : <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">monentreprise.localhost:3000</code> ou <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">demo.localhost:3000</code></li>
+                    <li>Dans le fichier <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">hosts</code> : <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">127.0.0.1 monentreprise.localhost</code></li>
                   </ul>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold">En production :</h4>
+                  <h4 className="font-semibold">En production</h4>
                   <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
-                    <li>Utilisez votre sous-domaine : <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">votre-tenant.gesticash.com</code></li>
-                    <li>Assurez-vous que le DNS est configuré correctement</li>
+                    <li>URL de type : <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">votre-org.gesticash.com</code></li>
+                    <li>Vérifiez que le DNS pointe bien vers l’application</li>
                   </ul>
                 </div>
               </div>
