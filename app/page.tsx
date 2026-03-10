@@ -489,10 +489,10 @@ function TestimonialsCarousel() {
                 <p className="text-sm text-muted-foreground leading-relaxed flex-1 mb-5 italic">
                   &ldquo;{t.text}&rdquo;
                 </p>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 group/avatar">
                   <motion.div
-                    className="relative h-10 w-10 rounded-full overflow-hidden bg-primary/10 flex-shrink-0 ring-2 ring-transparent"
-                    whileHover={{ scale: 1.25, rotate: 6, ringColor: "var(--color-primary)" }}
+                    className="relative h-10 w-10 rounded-full overflow-hidden bg-primary/10 flex-shrink-0 ring-2 ring-transparent group-hover/avatar:ring-primary"
+                    whileHover={{ scale: 1.25, rotate: 6 }}
                     transition={{ type: "spring", stiffness: 400, damping: 14 }}
                   >
                     <Image src={t.image} alt={t.name} fill className="object-cover" unoptimized />
