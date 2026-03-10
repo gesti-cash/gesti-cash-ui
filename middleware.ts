@@ -2,10 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTenantFromDomain, isDeploymentPlatformDomain } from "./shared/config/env";
 
 // Routes publiques qui ne nécessitent pas d'authentification
-const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/tenant-required"];
+const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/tenant-required"];
 
 // Routes qui nécessitent un tenant
-const tenantRoutes = ["/dashboard", "/settings", "/transactions", "/users", "/reports", "/mock-demo"];
+const tenantRoutes = [
+  "/dashboard",
+  "/settings",
+  "/transactions",
+  "/users",
+  "/reports",
+  "/mock-demo",
+  "/products",
+  "/orders",
+  "/customers",
+  "/stock",
+  "/inventory",
+  "/movements",
+  "/cash",
+  "/finances",
+  "/roas",
+  "/organizations",
+];
 
 // Vérifier si le mode mock est activé (via variable d'environnement ou config)
 function isMockModeEnabled(): boolean {
@@ -29,13 +46,16 @@ export async function middleware(request: NextRequest) {
   const requiresTenant = tenantRoutes.some(route => pathname.startsWith(route));
   
   // Vérifier si c'est une route publique
-  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  // Note: on utilise la correspondance exacte pour "/" pour éviter de matcher tous les chemins
+  const isPublicRoute = publicRoutes.some(route =>
+    route === "/" ? pathname === "/" : pathname.startsWith(route)
+  );
   
   // En mode mock, permettre l'accès sans tenant si l'utilisateur est authentifié
   const mockEnabled = isMockModeEnabled();
   
   // En mode mock, permettre l'accès aux routes tenant sans vérifier les cookies
-  // (car l'authentification est dans localStorage côté client)
+  // (car l'authentification est gérée côté client via localStorage)
   if (mockEnabled && requiresTenant) {
     const response = NextResponse.next();
     response.headers.set("x-tenant-slug", "demo"); // Slug par défaut en mode mock
@@ -60,9 +80,11 @@ export async function middleware(request: NextRequest) {
   }
   
   // Si l'utilisateur est authentifié et accède à une route publique
-  if (accessToken && isPublicRoute) {
+  // Ne pas rediriger vers /organizations/select si une organisation a déjà été sélectionnée (cookie)
+  const hasSelectedOrg = request.cookies.get("gesticash_org_selected")?.value === "1";
+  if (accessToken && isPublicRoute && pathname !== "/organizations/select") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = hasSelectedOrg ? "/dashboard" : "/organizations/select";
     return NextResponse.redirect(url);
   }
   
@@ -84,9 +106,10 @@ export const config = {
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)
      * - _next/image (image optimization files)
+     * - _next/data (RSC/data requests - avoid redirecting these to prevent loops)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - public folder / static assets
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/data|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useTenantStore } from "@/shared/tenant/store";
 import { useAuthStore } from "@/shared/auth/store";
 import { isMockEnabled, MOCK_TENANT } from "@/shared/mock";
 import { checkAuthFromStorage } from "@/shared/utils/auth-check";
 import { Sidebar } from "@/shared/components/sidebar";
+import { Header } from "@/shared/components/header";
 
 export default function TenantLayout({
   children,
@@ -15,6 +16,7 @@ export default function TenantLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { resolvedTheme } = useTheme();
   const { tenant, setTenant } = useTenantStore();
   const { isAuthenticated, user } = useAuthStore();
@@ -76,20 +78,25 @@ export default function TenantLayout({
       if (hasAuth && !tenant) {
         console.log("[TenantLayout] Chargement du tenant mock");
         setTenant(MOCK_TENANT);
+        if (typeof document !== "undefined") {
+          document.cookie = "gesticash_org_selected=1; path=/; max-age=" + (60 * 60 * 24 * 365) + "; SameSite=Lax";
+        }
       }
     }
   }, [mockEnabled, checkedStorage, storageAuth, isAuthenticated, user, tenant, setTenant]);
 
   // Rediriger vers login seulement si on est sûr que l'utilisateur n'est pas authentifié
+  // Ne pas rediriger depuis /organizations/select pour éviter une boucle avec le middleware
+  // (cookie présent mais localStorage pas encore rehydraté)
   useEffect(() => {
-    if (checkedStorage) {
+    if (checkedStorage && pathname !== "/organizations/select") {
       const hasAuth = storageAuth?.isAuthenticated || isAuthenticated || user;
       if (!hasAuth) {
         console.log("[TenantLayout] Utilisateur non authentifié, redirection vers /login");
         router.push("/login");
       }
     }
-  }, [checkedStorage, storageAuth, isAuthenticated, user, router]);
+  }, [checkedStorage, storageAuth, isAuthenticated, user, router, pathname]);
 
   // État de chargement initial
   if (!checkedStorage) {
@@ -107,6 +114,12 @@ export default function TenantLayout({
   const hasAuth = storageAuth?.isAuthenticated || isAuthenticated || user;
   const hasTenant = storageAuth?.tenant || tenant;
 
+  // /organizations/select : toujours afficher la page (évite boucle de redirection
+  // quand le cookie est présent mais localStorage pas encore rehydraté)
+  if (pathname === "/organizations/select") {
+    return <>{children}</>;
+  }
+
   // En mode mock, permettre l'accès si authentifié
   if (mockEnabled) {
     if (hasAuth) {
@@ -117,7 +130,10 @@ export default function TenantLayout({
       return (
         <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
           <Sidebar />
-          <div className="flex-1 overflow-y-auto">{children}</div>
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 overflow-y-auto">{children}</main>
+          </div>
         </div>
       );
     }
@@ -133,7 +149,10 @@ export default function TenantLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
       <Sidebar />
-      <div className="flex-1 overflow-y-auto">{children}</div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto">{children}</main>
+      </div>
     </div>
   );
 }

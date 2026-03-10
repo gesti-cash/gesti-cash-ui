@@ -1,18 +1,10 @@
 import type { Metadata } from "next";
-import { Montserrat } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { headers } from "next/headers";
 import { AppProviders } from "@/shared/providers";
 import { getTenantFromDomain } from "@/shared/config/env";
 import "./globals.css";
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "GestiCash - Solution de Gestion & de Vente",
@@ -36,7 +28,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${montserrat.variable} antialiased`}
+        className="antialiased"
         suppressHydrationWarning
       >
         {/* Applique le thème sur <html> avant hydratation pour que le tenant (et tout le reste) voie le bon mode */}

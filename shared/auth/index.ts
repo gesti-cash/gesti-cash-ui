@@ -8,10 +8,17 @@ export {
   useSession,
   useUpdateProfile,
   useChangePassword,
+  useForgotPassword,
+  useResetPassword,
+  useVerifyEmail,
   loginSchema,
   registerSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   type LoginInput,
   type RegisterInput,
+  type ForgotPasswordInput,
+  type ResetPasswordInput,
 } from "./hooks";
 export {
   withAuth,

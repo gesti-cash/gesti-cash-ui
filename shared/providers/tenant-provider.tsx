@@ -11,8 +11,25 @@ interface TenantProviderProps {
   tenantSlug: string | null;
 }
 
+/** Cookie indiquant qu'une organisation a déjà été sélectionnée (évite écran "Organisation requise" pendant réhydratation) */
+const COOKIE_ORG_SELECTED = "gesticash_org_selected";
+
+function hasOrgSelectedCookie(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie.includes(COOKIE_ORG_SELECTED + "=1");
+}
+
 // Routes publiques qui ne nécessitent pas de tenant
-const PUBLIC_ROUTES = ["/", "/login", "/register", "/forgot-password", "/reset-password"];
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
+  // Sélection / création d'organisation doit être accessible sans tenant
+  "/organizations/select",
+];
 
 export function TenantProvider({ children, tenantSlug }: TenantProviderProps) {
   const pathname = usePathname();
@@ -42,32 +59,53 @@ export function TenantProvider({ children, tenantSlug }: TenantProviderProps) {
   
   // Si pas de slug sur une route qui nécessite un tenant
   if (!tenantSlug && !isPublicRoute) {
-    // En mode mock, on utilise le tenant mock
-    if (isMockEnabled() && tenant?.id === MOCK_TENANT.id) {
+    // Laisser passer si un tenant est déjà en store (sélection sur /organizations/select ou mock)
+    if (tenant) {
       return <>{children}</>;
     }
     
-    // Sinon, afficher une page d'erreur pour sélectionner/créer un tenant
+    // Cookie présent = utilisateur a déjà sélectionné une org (store peut ne pas être réhydraté encore)
+    if (hasOrgSelectedCookie()) {
+      return <>{children}</>;
+    }
+    
+    // En mode mock, laisser passer (le layout ou l'effet chargera le tenant mock)
+    if (isMockEnabled()) {
+      return <>{children}</>;
+    }
+    
+    // Sinon, afficher une page pour sélectionner une organisation ou utiliser le sous-domaine
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-900">
-        <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-lg dark:bg-zinc-800">
+      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-900 p-4">
+        <div className="max-w-md rounded-xl bg-white p-8 text-center shadow-lg dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
           <div className="mb-4 text-6xl">🏢</div>
           <h1 className="mb-2 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
             Organisation requise
           </h1>
-          <p className="mb-6 text-zinc-600 dark:text-zinc-400">
-            Pour accéder à cette page, vous devez utiliser votre sous-domaine :<br />
-            <code className="mt-2 inline-block rounded bg-zinc-100 px-2 py-1 text-sm dark:bg-zinc-700">
-              votre-tenant.localhost:3000
-            </code>
+          <p className="mb-4 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
+            Pour accéder au tableau de bord, une organisation doit être associée à votre accès.
           </p>
-          <p className="text-sm text-zinc-500 dark:text-zinc-500">
-            En développement, utilisez un sous-domaine comme <strong>tenant1.localhost:3000</strong>
-          </p>
-          {isMockEnabled() && (
-            <p className="mt-4 text-sm text-blue-600 dark:text-blue-400">
-              💡 Mode mock activé : Le tenant mock sera chargé automatiquement après connexion
-            </p>
+          {isMockEnabled() ? (
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 text-left">
+              <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-1">
+                Mode développement activé
+              </p>
+              <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                Connectez-vous depuis la page de connexion : une organisation de démonstration sera chargée automatiquement après authentification.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-3">
+                Utilisez l’URL de votre organisation (sous-domaine) :
+              </p>
+              <code className="block rounded-lg bg-zinc-100 dark:bg-zinc-700/80 px-4 py-2.5 text-sm font-mono text-zinc-800 dark:text-zinc-200">
+                nom-org.localhost:3000
+              </code>
+              <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">
+                Exemple en local : <strong>monentreprise.localhost:3000</strong> ou <strong>demo.localhost:3000</strong>
+              </p>
+            </>
           )}
         </div>
       </div>

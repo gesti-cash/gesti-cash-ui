@@ -77,6 +77,11 @@ export const queryKeys = {
     settings: (tenantId: string) => ["tenant", tenantId, "settings"] as const,
   },
   
+  // Organizations
+  organizations: {
+    list: (tenantId: string) => ["organizations", tenantId, "list"] as const,
+  },
+  
   // Transactions
   transactions: {
     all: (tenantId: string) => ["transactions", tenantId] as const,
@@ -99,5 +104,92 @@ export const queryKeys = {
   dashboard: {
     stats: (tenantId: string, period?: string) => 
       ["dashboard", tenantId, "stats", period] as const,
+  },
+
+  // Categories
+  categories: {
+    all: (tenantId: string) => ["categories", tenantId] as const,
+    list: (tenantId: string, organizationId?: string) =>
+      ["categories", tenantId, "list", organizationId] as const,
+    detail: (tenantId: string, id: string) =>
+      ["categories", tenantId, "detail", id] as const,
+  },
+
+  // Products
+  products: {
+    all: (tenantId: string) => ["products", tenantId] as const,
+    list: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["products", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["products", tenantId, "detail", id] as const,
+  },
+
+  // Reference data
+  reference: {
+    countries: ["reference", "countries"] as const,
+    cities: (countryId?: string) => ["reference", "cities", countryId] as const,
+  },
+
+  // Orders (ERP Commandes & livraisons)
+  orders: {
+    all: (tenantId: string) => ["orders", tenantId] as const,
+    list: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["orders", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["orders", tenantId, "detail", id] as const,
+  },
+
+  // Customers (Clients)
+  customers: {
+    all: (tenantId: string) => ["customers", tenantId] as const,
+    list: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["customers", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["customers", tenantId, "detail", id] as const,
+  },
+
+  // Suppliers (Fournisseurs)
+  suppliers: {
+    all: (tenantId: string) => ["suppliers", tenantId] as const,
+    list: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["suppliers", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["suppliers", tenantId, "detail", id] as const,
+  },
+
+  // Drivers (Chauffeurs / Livreurs)
+  drivers: {
+    all: (tenantId: string) => ["drivers", tenantId] as const,
+    list: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["drivers", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["drivers", tenantId, "detail", id] as const,
+  },
+
+  // Purchase orders (Bons de commande)
+  purchaseOrders: {
+    all: (tenantId: string) => ["purchaseOrders", tenantId] as const,
+    list: (tenantId: string, filters?: Record<string, unknown>) =>
+      ["purchaseOrders", tenantId, "list", filters] as const,
+    detail: (tenantId: string, id: string) =>
+      ["purchaseOrders", tenantId, "detail", id] as const,
+  },
+
+  // Stocks
+  stocks: {
+    all: (tenantId: string) => ["stocks", tenantId] as const,
+    list: (tenantId: string, organizationId?: string) =>
+      ["stocks", tenantId, "list", organizationId] as const,
+    detail: (tenantId: string, id: string) =>
+      ["stocks", tenantId, "detail", id] as const,
+  },
+
+  // Inventories (Inventaires)
+  inventories: {
+    all: (tenantId: string) => ["inventories", tenantId] as const,
+    list: (tenantId: string, organizationId?: string) =>
+      ["inventories", tenantId, "list", organizationId] as const,
+    detail: (tenantId: string, id: string) =>
+      ["inventories", tenantId, "detail", id] as const,
   },
 };

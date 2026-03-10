@@ -5,13 +5,13 @@ import { useAuthStore } from "./store";
 import { useTenantStore } from "../tenant/store";
 import { queryClient, queryKeys } from "../api/react-query";
 import type { User, AuthTokens } from "../types";
+import { UserRole } from "../types";
 import { z } from "zod";
 
 // Schémas de validation Zod
 export const loginSchema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
-  tenantSlug: z.string().min(1, "Le tenant est requis"),
 });
 
 export const registerSchema = z.object({
@@ -26,9 +26,35 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 interface LoginResponse {
-  user: User;
-  tokens: AuthTokens;
+  user: {
+    id: string;
+    name?: string;
+    email: string;
+    tenantId: string;
+    emailVerifiedAt?: string | null;
+    firstName?: string;
+    lastName?: string;
+    role?: UserRole;
+  };
+  accessToken: string;
+  expiresIn: string;
 }
+
+const mapApiUserToUser = (apiUser: LoginResponse["user"]): User => {
+  const fullName = apiUser.name || "";
+  const parts = fullName.trim().split(" ").filter(Boolean);
+  const firstName = apiUser.firstName || parts[0] || fullName || apiUser.email;
+  const lastName = apiUser.lastName || parts.slice(1).join(" ");
+
+  return {
+    id: apiUser.id,
+    email: apiUser.email,
+    firstName,
+    lastName: lastName || "",
+    tenantId: apiUser.tenantId,
+    role: apiUser.role ?? UserRole.USER,
+  };
+};
 
 // Hook pour la connexion
 export const useLogin = () => {
@@ -41,9 +67,16 @@ export const useLogin = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      setAuthState(data.user, data.tokens);
-      queryClient.setQueryData(queryKeys.auth.user, data.user);
-      router.push("/dashboard");
+      const user = mapApiUserToUser(data.user);
+      // Adapter la réponse de l'API au format attendu par le store
+      const tokens: AuthTokens = {
+        accessToken: data.accessToken,
+        refreshToken: "",
+      };
+      setAuthState(user, tokens);
+      queryClient.setQueryData(queryKeys.auth.user, user);
+      // Après connexion, passer par la sélection d'organisation
+      router.push("/organizations/select");
     },
     onError: (error) => {
       const apiError = extractApiError(error);
@@ -63,16 +96,21 @@ export const useRegister = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      setAuthState(data.user, data.tokens);
-      queryClient.setQueryData(queryKeys.auth.user, data.user);
-      router.push("/dashboard");
-    },
-    onError: (error) => {
-      const apiError = extractApiError(error);
-      console.error("Register error:", apiError);
+      const user = mapApiUserToUser(data.user);
+      const tokens: AuthTokens = {
+        accessToken: data.accessToken,
+        refreshToken: "",
+      };
+      setAuthState(user, tokens);
+      queryClient.setQueryData(queryKeys.auth.user, user);
+      // Après création de compte, passer par la sélection d'organisation
+      router.push("/organizations/select");
     },
   });
 };
+
+/** Nom du cookie indiquant qu'une organisation a été sélectionnée (à effacer au logout) */
+const COOKIE_ORG_SELECTED = "gesticash_org_selected";
 
 // Hook pour la déconnexion
 export const useLogout = () => {
@@ -85,10 +123,12 @@ export const useLogout = () => {
       await apiClient.post("/auth/logout");
     },
     onSettled: () => {
-      // Nettoyer le state même en cas d'erreur
       clearAuthState();
       clearTenant();
       queryClient.clear();
+      if (typeof document !== "undefined") {
+        document.cookie = `${COOKIE_ORG_SELECTED}=; path=/; max-age=0`;
+      }
       router.push("/login");
     },
   });
@@ -146,6 +186,58 @@ export const useChangePassword = () => {
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
       const response = await apiClient.post("/auth/change-password", data);
       return response.data;
+    },
+  });
+};
+
+/** Mot de passe oublié – POST /api/v1/auth/forgot-password – body: { email }, réponse 204 */
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Email invalide"),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: async (data: ForgotPasswordInput) => {
+      await apiClient.post("/auth/forgot-password", { email: data.email });
+      // 204 No Content : pas de body
+    },
+  });
+};
+
+/** Réinitialiser le mot de passe – POST /api/v1/auth/reset-password – body: { token, password }, 204 ou 400 (token invalide/expiré) */
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Token requis"),
+    password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+    confirmPassword: z.string().min(1, "Confirmez le mot de passe"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: async (data: ResetPasswordInput) => {
+      await apiClient.post("/auth/reset-password", {
+        token: data.token,
+        password: data.password,
+      });
+      // 204 No Content
+    },
+  });
+};
+
+/** Vérification email – POST /api/v1/auth/verify-email – body: { token }, 204 ou 400 (token invalide/expiré) */
+export const useVerifyEmail = () => {
+  return useMutation({
+    mutationFn: async (data: { token: string }) => {
+      await apiClient.post("/auth/verify-email", { token: data.token });
+      // 204 No Content
     },
   });
 };

@@ -67,11 +67,13 @@ export const PUBLIC_ROUTES = [
   "/register",
   "/forgot-password",
   "/reset-password",
+  "/verify-email",
 ] as const;
 
 // Routes tenant
 export const TENANT_ROUTES = [
   "/dashboard",
+  "/finances",
   "/settings",
   "/transactions",
   "/users",
@@ -90,6 +92,25 @@ export const HTTP_STATUS = {
   CONFLICT: 409,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
+
+// Téléphone (format E.164, code pays)
+export {
+  PHONE_COUNTRY_CODES,
+  phoneSchema,
+  phoneSchemaOptional,
+  PHONE_VALIDATION_MESSAGE,
+  normalizePhone,
+  isValidE164,
+  getCountryCodeFromE164,
+  getLocalNumberFromE164,
+  formatPhoneDisplay,
+} from "./phone";
+
+// Images (accroches auth, base finances)
+export {
+  AUTH_ACCROCHE_IMAGE,
+  FINANCE_BASE_IMAGE,
+} from "./images";
 
 // Messages d'erreur communs
 export const ERROR_MESSAGES = {
