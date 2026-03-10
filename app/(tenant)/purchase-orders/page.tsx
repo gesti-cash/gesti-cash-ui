@@ -851,9 +851,6 @@ export default function PurchaseOrdersPage() {
                         <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                           Nouveau bon de commande (brouillon)
                         </h2>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                          Sans impact stock – API POST /api/v1/purchase-orders
-                        </p>
                       </div>
                     </div>
                     <Button

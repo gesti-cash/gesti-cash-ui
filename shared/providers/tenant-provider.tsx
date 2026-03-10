@@ -26,6 +26,7 @@ const PUBLIC_ROUTES = [
   "/register",
   "/forgot-password",
   "/reset-password",
+  "/verify-email",
   // Sélection / création d'organisation doit être accessible sans tenant
   "/organizations/select",
 ];

@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { phoneSchema, phoneSchemaOptional, formatPhoneDisplay } from "@/shared/constants";
+import { PhoneInput } from "@/shared/ui/phone-input";
 import {
   useTenantId,
   useSelectedOrganizationId,
@@ -44,7 +46,7 @@ import {
 const createDriverSchema = z.object({
   first_name: z.string().min(2, "Le prénom doit comporter au moins 2 caractères"),
   last_name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
-  phone: z.string().min(1, "Le téléphone est requis"),
+  phone: phoneSchema,
   vehicle_type: z.string().optional(),
   vehicle_plate: z.string().optional(),
   organization_id: z.string().min(1, "Veuillez sélectionner une organisation"),
@@ -56,7 +58,7 @@ type CreateDriverFormValues = z.infer<typeof createDriverSchema>;
 const updateDriverSchema = z.object({
   first_name: z.string().min(2).optional(),
   last_name: z.string().min(2).optional(),
-  phone: z.string().min(1).optional(),
+  phone: phoneSchemaOptional,
   vehicle_type: z.string().optional(),
   vehicle_plate: z.string().optional(),
   organization_id: z.string().optional(),
@@ -85,6 +87,7 @@ export default function DeliveryPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -414,7 +417,7 @@ export default function DeliveryPage() {
                           {driver.phone ? (
                             <span className="flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400">
                               <Phone className="h-3.5 w-3.5 text-zinc-400" />
-                              {driver.phone}
+                              {formatPhoneDisplay(driver.phone)}
                             </span>
                           ) : (
                             <span className="text-sm text-zinc-400">—</span>
@@ -515,7 +518,7 @@ export default function DeliveryPage() {
                   <div className="p-6 space-y-4">
                     <DetailRow
                       label="Téléphone"
-                      value={selectedDriver.phone || "—"}
+                      value={formatPhoneDisplay(selectedDriver.phone ?? "")}
                     />
                     <DetailRow
                       label="Type de véhicule"
@@ -696,11 +699,22 @@ export default function DeliveryPage() {
                         <Phone className="h-3.5 w-3.5 text-zinc-400" />
                         Téléphone <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="dr-phone"
-                        placeholder="ex: +225 07 00 00 00 00"
-                        {...register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                      <Controller
+                        name="phone"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <PhoneInput
+                            id="dr-phone"
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            placeholder="07 00 00 00 00"
+                            className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:border-blue-500 focus-visible:ring-blue-500/20"
+                            containerClassName="focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500"
+                            error={!!errors.phone}
+                          />
+                        )}
                       />
                       {errors.phone && (
                         <p className="text-xs text-red-500">{errors.phone.message}</p>
@@ -870,9 +884,19 @@ export default function DeliveryPage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Téléphone</Label>
-                      <Input
-                        {...updateForm.register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                      <Controller
+                        name="phone"
+                        control={updateForm.control}
+                        render={({ field }) => (
+                          <PhoneInput
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            placeholder="07 00 00 00 00"
+                            className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                            error={!!updateForm.formState.errors.phone}
+                          />
+                        )}
                       />
                       {updateForm.formState.errors.phone && (
                         <p className="text-xs text-red-500">

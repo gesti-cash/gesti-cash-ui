@@ -189,3 +189,55 @@ export const useChangePassword = () => {
     },
   });
 };
+
+/** Mot de passe oublié – POST /api/v1/auth/forgot-password – body: { email }, réponse 204 */
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Email invalide"),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const useForgotPassword = () => {
+  return useMutation({
+    mutationFn: async (data: ForgotPasswordInput) => {
+      await apiClient.post("/auth/forgot-password", { email: data.email });
+      // 204 No Content : pas de body
+    },
+  });
+};
+
+/** Réinitialiser le mot de passe – POST /api/v1/auth/reset-password – body: { token, password }, 204 ou 400 (token invalide/expiré) */
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Token requis"),
+    password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+    confirmPassword: z.string().min(1, "Confirmez le mot de passe"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const useResetPassword = () => {
+  return useMutation({
+    mutationFn: async (data: ResetPasswordInput) => {
+      await apiClient.post("/auth/reset-password", {
+        token: data.token,
+        password: data.password,
+      });
+      // 204 No Content
+    },
+  });
+};
+
+/** Vérification email – POST /api/v1/auth/verify-email – body: { token }, 204 ou 400 (token invalide/expiré) */
+export const useVerifyEmail = () => {
+  return useMutation({
+    mutationFn: async (data: { token: string }) => {
+      await apiClient.post("/auth/verify-email", { token: data.token });
+      // 204 No Content
+    },
+  });
+};

@@ -3,915 +3,1246 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Badge } from "@/shared/ui/badge";
 import {
-  Rocket,
-  AlertCircle,
   Package,
-  Receipt,
   DollarSign,
-  Clock,
   CheckCircle2,
   BarChart3,
-  Box,
   TrendingUp,
-  Users,
   FileText,
   Building2,
-  Smartphone,
   Lock,
   Zap,
   ShoppingCart,
-  Mail,
-  MessageSquare,
   ChevronRight,
   Star,
-  Quote,
   ArrowRight,
   ArrowLeft,
-  Monitor,
+  Rocket,
+  AlertCircle,
+  Clock,
+  Receipt,
+  Users,
+  ArrowUpRight,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { motion, useInView } from "framer-motion";
 import { useRef, useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 
-// Animation component for scroll reveal
-function FadeInWhenVisible({ children }: { children: React.ReactNode }) {
+// ─── Animated Counter ────────────────────────────────────────────────────────
+function AnimatedCounter({
+  end,
+  suffix = "",
+  prefix = "",
+}: {
+  end: number;
+  suffix?: string;
+  prefix?: string;
+}) {
+  const [count, setCount] = useState(0);
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-    >
-      {children}
-    </motion.div>
-  );
+  const isInView = useInView(ref, { once: true });
+  useEffect(() => {
+    if (!isInView) return;
+    let start = 0;
+    const inc = end / (2000 / 16);
+    const t = setInterval(() => {
+      start += inc;
+      if (start >= end) { setCount(end); clearInterval(t); }
+      else setCount(Math.floor(start));
+    }, 16);
+    return () => clearInterval(t);
+  }, [isInView, end]);
+  return <span ref={ref}>{prefix}{count.toLocaleString()}{suffix}</span>;
 }
 
-// Testimonials Carousel Component
-function TestimonialsCarousel() {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on("select", () => {
-      setSelectedIndex(emblaApi.selectedScrollSnap());
-    });
-  }, [emblaApi]);
-
-  const testimonials = [
-    {
-      name: "Amadou Diallo",
-      role: "E-commerce - Dakar",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amadou",
-      text: "Avant GestiCash, je perdais facilement 200.000 FCFA par mois sans comprendre pourquoi. Maintenant, je sais exactement où va chaque franc. Mon chiffre d'affaires a augmenté de 40% en 3 mois !",
-      rating: 5,
-    },
-    {
-      name: "Fatou Ndiaye",
-      role: "Boutique de mode - Abidjan",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatou",
-      text: "Le suivi COD était un cauchemar avant. Maintenant avec GestiCash, je sais en temps réel combien de colis sont livrés et combien je dois récupérer. C'est magique !",
-      rating: 5,
-    },
-    {
-      name: "Moussa Koné",
-      role: "Supérette - Bamako",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Moussa",
-      text: "La gestion du stock en temps réel m'a sauvé. Plus de ruptures, plus de surstocks. Je commande juste ce qu'il faut, au bon moment.",
-      rating: 5,
-    },
-    {
-      name: "Aïcha Traoré",
-      role: "Multimagasins - Cotonou",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aicha",
-      text: "Avec 3 magasins, c'était impossible de tout suivre. GestiCash m'a donné une vision consolidée de tout mon business. Je gagne 10h par semaine !",
-      rating: 5,
-    },
-  ];
-
+// ─── Hero Dashboard Mockup ────────────────────────────────────────────────────
+function DashboardMockup() {
+  const bars = [35, 55, 42, 78, 52, 90, 65];
   return (
-    <div className="relative">
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex gap-4">
-          {testimonials.map((testimonial, index) => (
-            <div key={index} className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.33%] min-w-0 pl-4">
-              <Card className="h-full bg-card/50 backdrop-blur border-primary/10 hover:border-primary/30 transition-all duration-300">
-                <CardHeader>
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="relative h-16 w-16 rounded-full overflow-hidden bg-primary/10">
-                      <Image
-                        src={testimonial.image}
-                        alt={testimonial.name}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-base">{testimonial.name}</CardTitle>
-                      <CardDescription className="text-xs">{testimonial.role}</CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 mb-3">
-                    {Array.from({ length: testimonial.rating }).map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <Quote className="h-8 w-8 text-primary/20 mb-2" />
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {testimonial.text}
-                  </p>
-                </CardHeader>
-              </Card>
+    <div className="relative w-full max-w-[380px] mx-auto">
+      {/* Background glow blob */}
+      <div className="pointer-events-none absolute -inset-10 rounded-3xl bg-primary/8 blur-2xl" />
+
+      {/* Main dashboard card */}
+      <div className="relative rounded-2xl border border-border/50 bg-white dark:bg-card shadow-2xl p-5 z-10 animate-card-glow animate-scan">
+        {/* Header row */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-[11px] font-medium text-muted-foreground mb-0.5">
+              Revenus du mois
+            </p>
+            <p className="text-2xl font-bold leading-none">
+              1 240 000{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                FCFA
+              </span>
+            </p>
+            <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 bg-green-50 dark:bg-green-900/30 rounded-md px-2 py-0.5">
+              <TrendingUp className="h-2.5 w-2.5" />
+              +18% vs mois dernier
+            </div>
+          </div>
+          <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="h-4.5 w-4.5 text-primary" />
+          </div>
+        </div>
+
+        {/* Bar chart */}
+        <div className="flex items-end gap-1.5 h-[68px] mb-1.5">
+          {bars.map((h, i) => (
+            <motion.div
+              key={i}
+              className="flex-1 rounded-t-md"
+              initial={{ height: 0 }}
+              animate={{ height: `${h}%` }}
+              transition={{ duration: 0.6, delay: i * 0.07, ease: [0.34, 1.56, 0.64, 1] }}
+              style={{
+                backgroundColor:
+                  i === 5
+                    ? "var(--color-primary)"
+                    : "oklch(66% 0.15 145 / 0.18)",
+              }}
+            />
+          ))}
+        </div>
+        <div className="flex gap-1.5 mb-4">
+          {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+            <span
+              key={i}
+              className="flex-1 text-center text-[10px] text-muted-foreground"
+            >
+              {d}
+            </span>
+          ))}
+        </div>
+
+        {/* Quick stats row */}
+        <div className="grid grid-cols-3 gap-2 pt-3.5 border-t border-border/50">
+          {[
+            { label: "Ventes", value: "247", color: "text-primary" },
+            { label: "Colis COD", value: "38", color: "text-blue-500" },
+            { label: "En stock", value: "1 204", color: "text-amber-500" },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <p className={`text-sm font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {s.label}
+              </p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Navigation buttons */}
-      <div className="flex gap-2 justify-center mt-6">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollPrev}
-          className="rounded-full h-10 w-10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollNext}
-          className="rounded-full h-10 w-10"
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+      {/* Floating card 1 — Vente confirmée (top-right) */}
+      <div className="animate-float-up absolute -top-5 -right-6 z-20 glass-card rounded-xl shadow-lg px-3 py-2.5 flex items-center gap-2.5 w-[195px]">
+        <div className="h-8 w-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+          <DollarSign className="h-3.5 w-3.5 text-green-500" />
+        </div>
+        <div>
+          <p className="text-[11px] font-bold text-foreground">
+            +85 000 FCFA
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            Vente confirmée · 2 min
+          </p>
+        </div>
       </div>
 
-      {/* Dots indicator */}
-      <div className="flex justify-center gap-2 mt-4">
-        {testimonials.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => emblaApi?.scrollTo(index)}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              index === selectedIndex ? "w-8 bg-primary" : "w-2 bg-primary/30"
-            }`}
-          />
+      {/* Floating card 2 — COD livré (bottom-left) */}
+      <div className="animate-float-down absolute -bottom-5 -left-6 z-20 glass-card rounded-xl shadow-lg px-3 py-2.5 flex items-center gap-2.5 w-[195px]">
+        <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+          <Package className="h-3.5 w-3.5 text-blue-500" />
+        </div>
+        <div>
+          <p className="text-[11px] font-bold text-foreground">
+            12 colis livrés
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            Aujourd&apos;hui · COD
+          </p>
+        </div>
+      </div>
+
+      {/* Floating pill — Stock (right middle) */}
+      <div className="animate-float-side absolute top-1/2 -right-16 z-20 glass-card rounded-full shadow-lg px-3 py-1.5 flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+        <span className="text-[11px] font-semibold whitespace-nowrap">
+          Stock OK
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Feature Mockups ──────────────────────────────────────────────────────────
+function FinancesMockup() {
+  return (
+    <div className="rounded-2xl border border-border/50 bg-white dark:bg-card shadow-xl p-5 w-full max-w-[340px]">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <DollarSign className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold">Trésorerie</p>
+          <p className="text-[10px] text-muted-foreground">Mise à jour en direct</p>
+        </div>
+        <span className="ml-auto text-[10px] font-semibold text-green-600 bg-green-50 rounded px-1.5 py-0.5">
+          Live
+        </span>
+      </div>
+      <div className="rounded-xl bg-primary/5 p-4 mb-4">
+        <p className="text-[10px] text-muted-foreground mb-0.5">Solde actuel</p>
+        <p className="text-xl font-bold">2 840 000 FCFA</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {[
+          { label: "Entrées", value: "+1,2M", color: "text-green-600", bg: "bg-green-50" },
+          { label: "Sorties", value: "-380K", color: "text-rose-500", bg: "bg-rose-50" },
+          { label: "Profit", value: "+820K", color: "text-primary", bg: "bg-primary/10" },
+        ].map((s) => (
+          <div key={s.label} className={`${s.bg} rounded-lg p-2 text-center`}>
+            <p className={`text-xs font-bold ${s.color}`}>{s.value}</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">
+        {[
+          { label: "Vente #247", amount: "+45 000", color: "text-green-600" },
+          { label: "Achat fournisseur", amount: "-28 000", color: "text-rose-500" },
+          { label: "Vente #246", amount: "+32 000", color: "text-green-600" },
+        ].map((t, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, delay: 0.2 + i * 0.08 }}
+            className="flex items-center justify-between text-xs rounded-lg border border-border/40 px-3 py-2 animate-row-flash"
+          >
+            <span className="text-muted-foreground">{t.label}</span>
+            <span className={`font-semibold ${t.color}`}>{t.amount} F</span>
+          </motion.div>
         ))}
       </div>
     </div>
   );
 }
 
-// Screenshots Carousel Component
-function ScreenshotsCarousel() {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
-
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-
-  const screenshots = [
-    {
-      title: "Dashboard intuitif",
-      description: "Vue d'ensemble de votre business en un coup d'œil",
-      image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
-    },
-    {
-      title: "Gestion COD simplifiée",
-      description: "Suivez tous vos colis en temps réel",
-      image: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&q=80",
-    },
-    {
-      title: "Analytics avancés",
-      description: "Rapports détaillés et insights pertinents",
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-    },
-    {
-      title: "Gestion de stock",
-      description: "Stock en temps réel avec alertes automatiques",
-      image: "https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80",
-    },
+function CodMockup() {
+  const statuses = [
+    { n: "24", label: "Livrés", color: "bg-green-100 text-green-700" },
+    { n: "8", label: "En route", color: "bg-blue-100 text-blue-700" },
+    { n: "3", label: "Retournés", color: "bg-rose-100 text-rose-600" },
+    { n: "3", label: "Pending", color: "bg-amber-100 text-amber-700" },
   ];
-
   return (
-    <div className="relative">
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex gap-4">
-          {screenshots.map((screenshot, index) => (
-            <div key={index} className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_40%] min-w-0 pl-4">
-              <Card className="overflow-hidden group cursor-pointer border-2 hover:border-primary/50 transition-all duration-300">
-                <div className="relative h-64 overflow-hidden bg-muted">
-                  <Image
-                    src={screenshot.image}
-                    alt={screenshot.title}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 768px) 100vw, 50vw, 40vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <h4 className="text-white font-bold text-lg mb-1 drop-shadow-md">{screenshot.title}</h4>
-                    <p className="text-white/90 text-sm drop-shadow-md">{screenshot.description}</p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          ))}
+    <div className="rounded-2xl border border-border/50 bg-white dark:bg-card shadow-xl p-5 w-full max-w-[340px]">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+          <Package className="h-4 w-4 text-blue-500" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold">Suivi COD</p>
+          <p className="text-[10px] text-muted-foreground">38 colis actifs</p>
         </div>
       </div>
-
-      {/* Navigation buttons */}
-      <div className="flex gap-2 justify-center mt-6">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollPrev}
-          className="rounded-full h-10 w-10"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={scrollNext}
-          className="rounded-full h-10 w-10"
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {statuses.map((s) => (
+          <div
+            key={s.label}
+            className={`${s.color} rounded-xl p-3 text-center`}
+          >
+            <p className="text-lg font-bold">{s.n}</p>
+            <p className="text-[10px] font-medium mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2">
+        {[
+          { id: "#CMD-847", city: "Dakar 🇸🇳", status: "Livré ✅", col: "text-green-600" },
+          { id: "#CMD-846", city: "Abidjan 🇨🇮", status: "En route 🔄", col: "text-blue-500" },
+          { id: "#CMD-845", city: "Bamako 🇲🇱", status: "Retourné ❌", col: "text-rose-500" },
+        ].map((c, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, delay: 0.2 + i * 0.09 }}
+            className="flex items-center justify-between text-xs rounded-lg border border-border/40 px-3 py-2 animate-row-flash"
+          >
+            <div>
+              <p className="font-semibold">{c.id}</p>
+              <p className="text-muted-foreground">{c.city}</p>
+            </div>
+            <span className={`font-medium ${c.col}`}>{c.status}</span>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
 }
 
-// Animated Counter Component
-function AnimatedCounter({ end, suffix = "", prefix = "" }: { end: number; suffix?: string; prefix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true });
-
-  useEffect(() => {
-    if (!isInView) return;
-
-    let start = 0;
-    const duration = 2000;
-    const increment = end / (duration / 16);
-
-    const timer = setInterval(() => {
-      start += increment;
-      if (start >= end) {
-        setCount(end);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(start));
-      }
-    }, 16);
-
-    return () => clearInterval(timer);
-  }, [isInView, end]);
-
+function StockMockup() {
+  const items = [
+    { name: "Sac à main noir", qty: 48, status: "ok" },
+    { name: "Robe d'été rouge", qty: 3, status: "low" },
+    { name: "Chaussures blanches", qty: 0, status: "out" },
+    { name: "Sandales beiges", qty: 22, status: "ok" },
+  ];
   return (
-    <span ref={ref}>
-      {prefix}{count.toLocaleString()}{suffix}
-    </span>
+    <div className="rounded-2xl border border-border/50 bg-white dark:bg-card shadow-xl p-5 w-full max-w-[340px]">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-8 w-8 rounded-lg bg-amber-50 flex items-center justify-center">
+          <Package className="h-4 w-4 text-amber-500" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold">Inventaire</p>
+          <p className="text-[10px] text-muted-foreground">1 204 articles en stock</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 + i * 0.07 }}
+            className="flex items-center justify-between text-xs rounded-lg border border-border/40 px-3 py-2.5"
+          >
+            <p className="font-medium">{item.name}</p>
+            <div className="flex items-center gap-2">
+              <span className="font-bold">{item.qty}</span>
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  item.status === "ok"
+                    ? "bg-green-400"
+                    : item.status === "low"
+                    ? "bg-amber-400"
+                    : "bg-rose-400"
+                }`}
+              />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+      <div className="mt-3 flex gap-3 text-[10px] text-muted-foreground">
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-green-400" /> OK
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-amber-400" /> Stock bas
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-rose-400" /> Rupture
+        </span>
+      </div>
+    </div>
   );
 }
 
-export default function Home() {
+function AnalyticsMockup() {
+  const bars = [45, 62, 38, 75, 58, 82, 70];
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/logo/logo.png"
-                alt="GestiCash Logo"
-                width={40}
-                height={40}
-                className="h-10 w-10 object-contain"
+    <div className="rounded-2xl border border-border/50 bg-white dark:bg-card shadow-xl p-5 w-full max-w-[340px]">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center">
+          <BarChart3 className="h-4 w-4 text-purple-500" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold">Analytics</p>
+          <p className="text-[10px] text-muted-foreground">Cette semaine</p>
+        </div>
+      </div>
+      <div className="flex items-end gap-1.5 h-[60px] mb-1.5">
+        {bars.map((h, i) => (
+          <motion.div
+            key={i}
+            className="flex-1 rounded-t-md"
+            initial={{ height: 0 }}
+            animate={{ height: `${h}%` }}
+            transition={{ duration: 0.55, delay: i * 0.06, ease: [0.34, 1.56, 0.64, 1] }}
+            style={{
+              backgroundColor:
+                i === 5
+                  ? "oklch(60% 0.15 290)"
+                  : "oklch(60% 0.15 290 / 0.2)",
+            }}
+          />
+        ))}
+      </div>
+      <div className="flex gap-1.5 mb-4">
+        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+          <span key={i} className="flex-1 text-center text-[10px] text-muted-foreground">
+            {d}
+          </span>
+        ))}
+      </div>
+      <p className="text-[11px] font-semibold text-muted-foreground mb-2">
+        Top produits
+      </p>
+      <div className="space-y-2">
+        {[
+          { name: "Sac à main noir", sales: 45, pct: 85 },
+          { name: "Robe d'été rouge", sales: 32, pct: 60 },
+          { name: "Chaussures blanches", sales: 28, pct: 52 },
+        ].map((p, i) => (
+          <div key={i}>
+            <div className="flex justify-between text-[11px] mb-0.5">
+              <span className="font-medium">{p.name}</span>
+              <span className="text-muted-foreground">{p.sales} ventes</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-purple-400"
+                initial={{ width: 0 }}
+                animate={{ width: `${p.pct}%` }}
+                transition={{ duration: 0.8, delay: 0.3 + i * 0.1, ease: "easeOut" }}
               />
-              <div>
-                <h1 className="text-xl font-bold text-foreground">GestiCash™</h1>
-                <p className="text-[10px] text-muted-foreground">Votre argent, enfin sous contrôle.</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Testimonials Carousel ────────────────────────────────────────────────────
+const TESTIMONIALS = [
+  {
+    name: "Amadou Diallo",
+    role: "E-commerce",
+    flag: "🇸🇳",
+    city: "Dakar",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amadou",
+    text: "Avant GestiCash, je perdais facilement 200 000 FCFA par mois sans comprendre pourquoi. Maintenant je sais exactement où va chaque franc. +40% de CA en 3 mois.",
+    rating: 5,
+  },
+  {
+    name: "Fatou Ndiaye",
+    role: "Boutique de mode",
+    flag: "🇨🇮",
+    city: "Abidjan",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatou",
+    text: "Le suivi COD était un cauchemar. Avec GestiCash, je sais en temps réel combien de colis sont livrés et combien je dois récupérer. Indispensable.",
+    rating: 5,
+  },
+  {
+    name: "Moussa Koné",
+    role: "Supérette",
+    flag: "🇲🇱",
+    city: "Bamako",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Moussa",
+    text: "La gestion du stock en temps réel m'a sauvé. Plus de ruptures, plus de surstocks. Je commande juste ce qu'il faut, au bon moment.",
+    rating: 5,
+  },
+  {
+    name: "Aïcha Traoré",
+    role: "Multi-magasins",
+    flag: "🇧🇯",
+    city: "Cotonou",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Aicha",
+    text: "3 magasins, c'était impossible de tout suivre. GestiCash m'a donné une vision consolidée. Je gagne 10h par semaine et je dors tranquille.",
+    rating: 5,
+  },
+  {
+    name: "Seydou Ouédraogo",
+    role: "Grossiste",
+    flag: "🇧🇫",
+    city: "Ouagadougou",
+    image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Seydou",
+    text: "Enfin un outil qui comprend mon business. La gestion des fournisseurs et des bons de commande est devenue un jeu d'enfant.",
+    rating: 5,
+  },
+];
+
+function TestimonialsCarousel() {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "start" });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+  useEffect(() => {
+    if (!emblaApi) return;
+    emblaApi.on("select", () =>
+      setSelectedIndex(emblaApi.selectedScrollSnap())
+    );
+  }, [emblaApi]);
+
+  return (
+    <div className="relative">
+      <div className="overflow-hidden" ref={emblaRef}>
+        <div className="flex gap-5">
+          {TESTIMONIALS.map((t, i) => (
+            <div
+              key={i}
+              className="flex-[0_0_100%] md:flex-[0_0_50%] lg:flex-[0_0_33.33%] min-w-0 pl-4"
+            >
+              <div className="h-full rounded-2xl border border-border/50 bg-white dark:bg-card p-6 flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: t.rating }).map((_, j) => (
+                    <Star key={j} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed flex-1 mb-5 italic">
+                  &ldquo;{t.text}&rdquo;
+                </p>
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className="relative h-10 w-10 rounded-full overflow-hidden bg-primary/10 flex-shrink-0 ring-2 ring-transparent"
+                    whileHover={{ scale: 1.25, rotate: 6, ringColor: "var(--color-primary)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 14 }}
+                  >
+                    <Image src={t.image} alt={t.name} fill className="object-cover" unoptimized />
+                  </motion.div>
+                  <div>
+                    <p className="text-sm font-semibold">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.flag} {t.role} · {t.city}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-            <nav className="hidden gap-6 md:flex">
-              <a href="#features" className="text-sm font-medium hover:text-primary transition-colors">Fonctionnalités</a>
-              <a href="#pricing" className="text-sm font-medium hover:text-primary transition-colors">Tarifs</a>
-              <a href="#how-it-works" className="text-sm font-medium hover:text-primary transition-colors">Comment ça marche</a>
-              <a href="#faq" className="text-sm font-medium hover:text-primary transition-colors">FAQ</a>
-            </nav>
-            <div className="flex gap-3">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/login">Connexion</Link>
-              </Button>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 font-semibold" asChild>
-                <Link href="/register">S'inscrire</Link>
-              </Button>
-            </div>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 justify-center mt-6">
+        <button
+          onClick={scrollPrev}
+          className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <div className="flex gap-1.5">
+          {TESTIMONIALS.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => emblaApi?.scrollTo(i)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === selectedIndex ? "w-6 bg-primary" : "w-1.5 bg-primary/25"
+              }`}
+            />
+          ))}
+        </div>
+        <button
+          onClick={scrollNext}
+          className="h-9 w-9 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Features Tab Data ────────────────────────────────────────────────────────
+const FEATURE_TABS = [
+  {
+    id: "finances",
+    label: "Finances",
+    icon: DollarSign,
+    headline: "Maîtrisez chaque franc qui entre et sort",
+    desc: "Suivez votre trésorerie en temps réel, réconciliez vos entrées et sorties, et prenez les bonnes décisions sans jamais perdre de vue votre solde réel.",
+    points: [
+      "Trésorerie en temps réel",
+      "Revenus, dépenses, bénéfice net",
+      "Rapprochement automatique",
+      "Budgets et prévisions",
+    ],
+    mockup: <FinancesMockup />,
+  },
+  {
+    id: "cod",
+    label: "Ventes & COD",
+    icon: ShoppingCart,
+    headline: "Chaque colis, chaque franc — tracé en temps réel",
+    desc: "Fini les colis perdus et les encaissements manqués. GestiCash suit vos commandes COD de l'envoi au remboursement, avec visibilité totale à chaque étape.",
+    points: [
+      "Statuts colis : livré, en route, retourné",
+      "Réconciliation COD automatique",
+      "Historique complet par commande",
+      "Retours et remboursements",
+    ],
+    mockup: <CodMockup />,
+  },
+  {
+    id: "stock",
+    label: "Stock",
+    icon: Package,
+    headline: "Sachez toujours ce que vous avez en stock",
+    desc: "Alertes automatiques, mouvements tracés, niveaux min/max configurables. Zéro rupture, zéro surstock — vous commandez juste ce qu'il faut.",
+    points: [
+      "Stock en temps réel par produit",
+      "Alertes seuils minimum",
+      "Historique des mouvements",
+      "Inventaires rapides",
+    ],
+    mockup: <StockMockup />,
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    icon: BarChart3,
+    headline: "Des données claires pour décider vite",
+    desc: "Tableaux de bord personnalisés, rapports détaillés, top produits et tendances. Tout ce qu'il faut pour piloter votre croissance avec confiance.",
+    points: [
+      "Rapports journaliers / mensuels",
+      "Top produits et top clients",
+      "Analyse de marge par produit",
+      "Export Excel / PDF",
+    ],
+    mockup: <AnalyticsMockup />,
+  },
+];
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function Home() {
+  const [activeFeature, setActiveFeature] = useState(0);
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* ── HEADER ── */}
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/90 backdrop-blur-md">
+        <div className="container mx-auto px-5 h-[60px] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <motion.div
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10"
+              whileHover={{ scale: 1.18, rotate: 12 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: "spring", stiffness: 400, damping: 14 }}
+            >
+              <Image
+                src="/logo/logo.png"
+                alt="GestiCash"
+                width={22}
+                height={22}
+                className="h-[22px] w-[22px] object-contain"
+              />
+            </motion.div>
+            <span className="text-base font-bold tracking-tight">
+              GestiCash
+            </span>
+          </div>
+          <nav className="hidden gap-0.5 md:flex items-center">
+            {[
+              ["Fonctionnalités", "#fonctionnalites"],
+              ["Tarifs", "#tarifs"],
+              ["Comment ça marche", "#comment-ca-marche"],
+              ["FAQ", "#faq"],
+            ].map(([label, href]) => (
+              <a
+                key={label}
+                href={href}
+                className="px-3.5 py-2 text-sm font-medium text-muted-foreground rounded-lg hover:text-foreground hover:bg-muted transition-colors"
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className="flex gap-2 items-center">
+            {mounted && (
+              <motion.button
+                aria-label="Basculer le thème"
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400, damping: 14 }}
+              >
+                {resolvedTheme === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </motion.button>
+            )}
+            <Button variant="ghost" size="sm" className="font-medium" asChild>
+              <Link href="/login">Connexion</Link>
+            </Button>
+            <Button size="sm" className="rounded-lg font-semibold" asChild>
+              <Link href="/register">S&apos;inscrire — gratuit</Link>
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-secondary/5 py-20 md:py-32">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-4xl text-center">
+      {/* ── HERO — 2-column + floating dashboard ── */}
+      <section className="relative overflow-hidden pt-16 pb-24 md:pt-20 md:pb-32">
+        {/* Background layers */}
+        <div className="pointer-events-none absolute inset-0 bg-dot-grid" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[500px] bg-gradient-to-b from-primary/8 via-primary/3 to-transparent" />
+
+        {/* Decorative rings (GeniusPay-style) */}
+        <div className="pointer-events-none absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full border-2 border-primary/8" />
+        <div className="pointer-events-none absolute -top-20 -right-20 h-[380px] w-[380px] rounded-full border border-primary/6" />
+        <div className="pointer-events-none absolute top-0 right-0 h-[180px] w-[180px] rounded-full border border-primary/5" />
+
+        {/* Soft color blobs */}
+        <div className="pointer-events-none absolute bottom-0 -left-20 h-72 w-72 rounded-full bg-secondary/6 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/3 left-1/3 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
+
+        <div className="container relative z-10 mx-auto px-5">
+          <div className="grid gap-14 lg:grid-cols-2 lg:gap-10 items-center">
+            {/* Left column — text */}
+            <div className="max-w-xl">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/8 px-4 py-1.5 text-xs font-semibold text-primary">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  Gestion commerciale &amp; financière · Afrique
+                </div>
+              </motion.div>
+
+              <motion.h1
+                className="mb-5 text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-[3.25rem]"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                Votre argent,{" "}
+                <span className="hero-soft-text">enfin sous contrôle</span>
+              </motion.h1>
+
+              <motion.p
+                className="mb-8 text-base md:text-lg text-muted-foreground leading-relaxed"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+              >
+                La solution tout-en-un pour e-commerces et PME
+                d&apos;Afrique. Flux d&apos;argent, ventes COD, stock —{" "}
+                <strong className="text-foreground font-semibold">
+                  zéro perte invisible
+                </strong>
+                .
+              </motion.p>
+
+              <motion.div
+                className="flex flex-col gap-3 sm:flex-row mb-8"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3 }}
+              >
+                <Button
+                  size="lg"
+                  className="rounded-xl font-semibold px-7 text-base"
+                  asChild
+                >
+                  <Link href="/register">
+                    Démarrer gratuitement
+                    <ChevronRight className="ml-1.5 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-xl font-semibold text-base border-2"
+                >
+                  Voir une démo
+                </Button>
+              </motion.div>
+
+              <motion.div
+                className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-muted-foreground"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+              >
+                {[
+                  "Sans carte bancaire",
+                  "En place en 5 min",
+                  "Support en français",
+                  "30 jours gratuits",
+                ].map((b) => (
+                  <span key={b} className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    {b}
+                  </span>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Right column — floating dashboard mockup */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
+              className="hidden lg:flex items-center justify-center relative"
+              initial={{ opacity: 0, x: 30, scale: 0.92 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              whileHover={{ scale: 1.03, y: -6 }}
+              transition={{ duration: 0.7, delay: 0.2, type: "spring", stiffness: 200, damping: 22 }}
             >
-              <Badge variant="secondary" className="mb-4 text-xs font-semibold">
-                <Rocket className="mr-1 h-3 w-3" />
-                SaaS de gestion commerciale & financière
-              </Badge>
-            </motion.div>
-            
-            <motion.h2
-              className="mb-6 text-4xl font-extrabold leading-tight md:text-6xl"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              Votre argent,{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                enfin sous contrôle
-              </span>
-            </motion.h2>
-            
-            <motion.p
-              className="mb-8 text-lg text-muted-foreground md:text-xl"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              GestiCash est la solution SaaS tout-en-un qui permet aux e-commerces, commerces physiques et PME d'Afrique de maîtriser totalement leurs flux d'argent, ventes, stock et opérations — <strong>sans perte invisible</strong>.
-            </motion.p>
-            
-            <motion.div
-              className="mb-10 flex flex-col gap-4 sm:flex-row sm:justify-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-            >
-              <Button size="lg" className="bg-primary hover:bg-primary/90 font-semibold text-lg group" asChild>
-                <Link href="/register">
-                  S'inscrire gratuitement
-                  <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="font-semibold text-lg">
-                Voir une démo
-              </Button>
-            </motion.div>
-            <motion.div
-              className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span>Sans carte bancaire</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span>Installation en 5 min</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                <span>Support en français</span>
-              </div>
+              <DashboardMockup />
             </motion.div>
           </div>
         </div>
-        {/* Decorative gradient */}
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent" />
       </section>
 
-      {/* Social Proof Stats Section */}
-      <section className="py-16 bg-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8"
-          >
+      {/* ── SOCIAL PROOF BAND ── */}
+      <div className="border-y border-border/40 bg-white dark:bg-card py-4">
+        <div className="container mx-auto px-5">
+          <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">
+              Ils nous font confiance :
+            </span>
             {[
-              { value: 500, suffix: "+", label: "Entrepreneurs satisfaits" },
-              { value: 2, suffix: "M+", label: "FCFA gérés par mois" },
+              "🛍️ E-commerce",
+              "👗 Mode & Textile",
+              "🏪 Supérettes",
+              "📦 Grossistes",
+              "💊 Pharmacies",
+            ].map((item) => (
+              <span key={item} className="font-medium">
+                {item}
+              </span>
+            ))}
+            <span className="font-semibold text-primary">+500 boutiques</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── MARQUEE ── */}
+      <div className="border-b border-border/40 bg-muted/20 overflow-hidden py-3">
+        <div className="flex animate-marquee gap-10 whitespace-nowrap" aria-hidden="true">
+          {[...Array(2)].flatMap((_, set) =>
+            [
+              "E-commerce", "Boutique mode", "Supérette", "Restaurant",
+              "Pharmacie", "Librairie", "Quincaillerie", "Grossiste",
+              "Multi-magasins", "Friperie", "Électronique", "Cosmétiques",
+              "Alimentation", "Bijouterie", "Import / Export",
+            ].map((type, i) => (
+              <span
+                key={`${set}-${i}`}
+                className="inline-flex items-center gap-2.5 text-sm font-medium text-muted-foreground"
+              >
+                <span className="h-1 w-1 rounded-full bg-primary/40" />
+                {type}
+              </span>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── STATS ── */}
+      <section className="relative py-16 overflow-hidden">
+        {/* Decorative circle */}
+        <div className="pointer-events-none absolute -right-24 top-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full border-2 border-primary/8" />
+        <div className="pointer-events-none absolute -right-10 top-1/2 -translate-y-1/2 h-[240px] w-[240px] rounded-full border border-primary/6" />
+        <div className="pointer-events-none absolute -left-24 top-1/2 -translate-y-1/2 h-[320px] w-[320px] rounded-full bg-primary/4 blur-3xl" />
+
+        <div className="container relative z-10 mx-auto px-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+            {[
+              { value: 500, suffix: "+", label: "Entrepreneurs actifs" },
+              { value: 2, suffix: "M+", label: "FCFA gérés / mois" },
               { value: 10, suffix: "K+", label: "Transactions traitées" },
               { value: 99, suffix: "%", label: "Taux de satisfaction" },
-            ].map((stat, idx) => (
+            ].map((stat, i) => (
               <motion.div
-                key={idx}
-                initial={{ opacity: 0, scale: 0.5 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                key={i}
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: i * 0.07 }}
                 viewport={{ once: true }}
                 className="text-center"
               >
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
+                <div className="text-3xl md:text-4xl font-bold text-primary mb-1.5">
                   <AnimatedCounter end={stat.value} suffix={stat.suffix} />
                 </div>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* Problems Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="mx-auto max-w-3xl text-center mb-12">
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Les problèmes que vous rencontrez <span className="text-destructive">chaque jour</span>
-              </h3>
-              <p className="text-lg text-muted-foreground">
-                Nous comprenons les défis spécifiques des entrepreneurs en Afrique
-              </p>
-            </div>
-          </FadeInWhenVisible>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {/* ── PROBLEMS ── */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-cross-grid opacity-60" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
+        <div className="container relative z-10 mx-auto px-5">
+          <div className="max-w-xl mx-auto text-center mb-12">
+            <p className="text-xs font-semibold uppercase tracking-widest text-rose-500 mb-3">
+              Le problème
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Vous perdez de l&apos;argent sans le savoir
+            </h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              En moyenne, les entrepreneurs africains perdent 15–20% de leur CA
+              à cause d&apos;une gestion fragmentée.
+            </p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
             {[
               {
-                icon: <AlertCircle className="h-10 w-10 text-destructive" />,
+                icon: <AlertCircle className="h-5 w-5 text-rose-500" />,
                 title: "Argent qui disparaît",
-                description: "Vous ne savez jamais exactement combien vous avez gagné, encaissé, ou ce qu'il vous reste réellement."
+                desc: "Vous ne savez jamais combien vous avez réellement gagné ou ce qu'il vous reste.",
               },
               {
-                icon: <Package className="h-10 w-10 text-destructive" />,
+                icon: <Package className="h-5 w-5 text-rose-500" />,
                 title: "Stock désordonné",
-                description: "Ruptures de stock, surstocks, marchandises perdues... impossible de suivre vos produits."
+                desc: "Ruptures de stock, surstocks, marchandises perdues — impossible de tout suivre.",
               },
               {
-                icon: <Receipt className="h-10 w-10 text-destructive" />,
+                icon: <Receipt className="h-5 w-5 text-rose-500" />,
                 title: "COD non maîtrisé",
-                description: "En e-commerce COD : combien de colis envoyés ? Combien livrés ? Combien encaissés ? Aucune visibilité."
+                desc: "Combien de colis envoyés ? Livrés ? Encaissés ? Aucune visibilité.",
               },
               {
-                icon: <DollarSign className="h-10 w-10 text-destructive" />,
+                icon: <DollarSign className="h-5 w-5 text-rose-500" />,
                 title: "Pertes invisibles",
-                description: "Vol, erreurs de caisse, frais cachés... Vous perdez de l'argent sans même le savoir."
+                desc: "Vol, erreurs de caisse, frais cachés — vous perdez sans même le savoir.",
               },
               {
-                icon: <FileText className="h-10 w-10 text-destructive" />,
+                icon: <FileText className="h-5 w-5 text-rose-500" />,
                 title: "Gestion manuelle",
-                description: "Cahiers, Excel, WhatsApp... tout est dispersé et vous passez des heures à tout recalculer."
+                desc: "Cahiers, Excel, WhatsApp — tout dispersé, des heures perdues à recalculer.",
               },
               {
-                icon: <Clock className="h-10 w-10 text-destructive" />,
+                icon: <Clock className="h-5 w-5 text-rose-500" />,
                 title: "Pas de vision claire",
-                description: "Impossible de savoir si vous êtes rentable, quels produits marchent, ou où va votre argent."
-              }
-            ].map((problem, idx) => (
+                desc: "Impossible de savoir si vous êtes rentable ou quels produits marchent vraiment.",
+              },
+            ].map((p, i) => (
               <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
+                key={i}
+                initial={{ opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
+                transition={{ duration: 0.4, delay: i * 0.06 }}
                 viewport={{ once: true }}
+                className="rounded-2xl border border-rose-100 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-500/5 p-5 hover:border-rose-200 dark:hover:border-rose-800/60 transition-colors"
               >
-                <Card className="border-destructive/20 bg-card hover:shadow-lg transition-all duration-300 h-full hover:-translate-y-1">
-                  <CardHeader>
-                    <div className="mb-3">{problem.icon}</div>
-                    <CardTitle className="text-lg">{problem.title}</CardTitle>
-                    <CardDescription className="text-sm">{problem.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Solution Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-5xl">
-            <FadeInWhenVisible>
-              <div className="text-center mb-16">
-                <Badge variant="default" className="mb-4">La Solution</Badge>
-                <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                  GestiCash : <span className="text-primary">La maîtrise totale</span>
-                </h3>
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  À tout moment, vous savez <strong>exactement combien vous avez gagné, combien vous avez encaissé, et combien il vous reste.</strong>
+                <div className="mb-3">{p.icon}</div>
+                <h4 className="text-sm font-semibold mb-1.5">{p.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {p.desc}
                 </p>
-              </div>
-            </FadeInWhenVisible>
-
-            <div className="grid gap-8 md:grid-cols-2">
-              <motion.div
-                initial={{ opacity: 0, x: -50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <Card className="border-2 border-primary/30 bg-primary/5 h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <CheckCircle2 className="h-8 w-8" />
-                  </div>
-                  <CardTitle className="text-xl">Flux d'argent transparent</CardTitle>
-                  <CardDescription>
-                    Suivez chaque euro/franc qui entre et sort. Réconciliation automatique entre ventes, encaissements et soldes.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-              <Card className="border-2 border-secondary/30 bg-secondary/5 h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                    <BarChart3 className="h-8 w-8" />
-                  </div>
-                  <CardTitle className="text-xl">Gestion COD complète</CardTitle>
-                  <CardDescription>
-                    Suivi colis par colis : envoyés, livrés, retournés, encaissés. Plus jamais de colis perdu ou d'argent non récupéré.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: -50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-              <Card className="border-2 border-accent/30 bg-accent/5 h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                    <Box className="h-8 w-8" />
-                  </div>
-                  <CardTitle className="text-xl">Stock intelligent</CardTitle>
-                  <CardDescription>
-                    Stock en temps réel, alertes automatiques, mouvements tracés. Vous savez toujours ce que vous avez en magasin.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                viewport={{ once: true }}
-              >
-              <Card className="border-2 border-primary/30 bg-primary/5 h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                <CardHeader>
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <TrendingUp className="h-8 w-8" />
-                  </div>
-                  <CardTitle className="text-xl">Décisions éclairées</CardTitle>
-                  <CardDescription>
-                    Rapports instantanés, analytics en temps réel. Prenez les bonnes décisions au bon moment.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              </motion.div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="text-center mb-12">
-              <Badge variant="secondary" className="mb-4">
-                <Star className="mr-1 h-3 w-3 fill-current" />
-                Témoignages
-              </Badge>
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Ils ont repris le contrôle de leur business
-              </h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Découvrez comment GestiCash transforme la gestion de centaines d'entrepreneurs à travers l'Afrique
-              </p>
-            </div>
-          </FadeInWhenVisible>
-
-          <TestimonialsCarousel />
-        </div>
-      </section>
-
-      {/* Screenshots Section */}
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="text-center mb-12">
-              <Badge variant="default" className="mb-4">
-                <Monitor className="mr-1 h-3 w-3" />
-                Interface
-              </Badge>
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Une interface moderne et intuitive
-              </h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Conçue pour être simple à utiliser, même sans formation technique
-              </p>
-            </div>
-          </FadeInWhenVisible>
-
-          <ScreenshotsCarousel />
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="text-center mb-16">
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Fonctionnalités clés
-              </h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Tout ce dont vous avez besoin pour gérer votre entreprise, en un seul endroit
-              </p>
-            </div>
-          </FadeInWhenVisible>
-
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: <DollarSign className="h-10 w-10 text-primary" />,
-                title: "Gestion financière",
-                features: ["Suivi trésorerie en temps réel", "Revenus & dépenses", "Rapprochement bancaire", "Budgets & prévisions"]
-              },
-              {
-                icon: <ShoppingCart className="h-10 w-10 text-primary" />,
-                title: "Ventes & COD",
-                features: ["Gestion commandes COD", "Suivi livraisons", "Statuts colis détaillés", "Retours & remboursements"]
-              },
-              {
-                icon: <Package className="h-10 w-10 text-primary" />,
-                title: "Gestion de stock",
-                features: ["Stock en temps réel", "Alertes seuils min/max", "Mouvements tracés", "Inventaires simplifiés"]
-              },
-              {
-                icon: <BarChart3 className="h-10 w-10 text-primary" />,
-                title: "Reporting & Analytics",
-                features: ["Tableaux de bord personnalisés", "Rapports financiers", "Analyses de ventes", "Export Excel/PDF"]
-              },
-              {
-                icon: <Receipt className="h-10 w-10 text-primary" />,
-                title: "Facturation",
-                features: ["Factures professionnelles", "Devis & bons de commande", "Gestion clients", "Paiements multiples"]
-              },
-              {
-                icon: <Users className="h-10 w-10 text-primary" />,
-                title: "Multi-utilisateurs",
-                features: ["Gestion des rôles", "Permissions granulaires", "Activité tracée", "Collaboration équipe"]
-              },
-              {
-                icon: <Building2 className="h-10 w-10 text-primary" />,
-                title: "Multi-magasins",
-                features: ["Gestion centralisée", "Stocks par magasin", "Transferts inter-magasins", "Rapports consolidés"]
-              },
-              {
-                icon: <Smartphone className="h-10 w-10 text-primary" />,
-                title: "Mobile & Web",
-                features: ["Interface responsive", "Accessible partout", "Hors-ligne (bientôt)", "Application mobile (bientôt)"]
-              },
-              {
-                icon: <Lock className="h-10 w-10 text-primary" />,
-                title: "Sécurité & Sauvegarde",
-                features: ["Données chiffrées", "Backups automatiques", "Historique complet", "Conformité RGPD"]
-              }
-            ].map((feature, idx) => (
-              <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: idx * 0.05 }}
-                viewport={{ once: true }}
-              >
-                <Card className="hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-1 border-primary/10 hover:border-primary/30">
-                  <CardHeader>
-                    <div className="mb-3">{feature.icon}</div>
-                    <CardTitle className="text-lg mb-3">{feature.title}</CardTitle>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      {feature.features.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardHeader>
-                </Card>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-gradient-to-br from-muted/30 via-background to-muted/10">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="text-center mb-16">
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Tarifs simples et transparents
-              </h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Choisissez le plan qui correspond à vos besoins. Changez à tout moment.
-              </p>
-            </div>
-          </FadeInWhenVisible>
-
-          <div className="grid gap-8 md:grid-cols-2 max-w-4xl mx-auto">
-            {/* Standard Plan */}
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-            <Card className="border-2 hover:shadow-xl transition-all duration-300 h-full hover:-translate-y-2">
-              <CardHeader className="text-center pb-8">
-                <div className="mb-4">
-                  <Badge variant="secondary">Standard</Badge>
-                </div>
-                <CardTitle className="text-2xl mb-2">Plan Standard</CardTitle>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold">9.900 FCFA</span>
-                  <span className="text-muted-foreground">/mois</span>
-                </div>
-                <CardDescription>
-                  Pour les petites entreprises et entrepreneurs solo
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    "1 magasin/point de vente",
-                    "3 utilisateurs max",
-                    "Gestion financière complète",
-                    "Ventes & COD (100 commandes/mois)",
-                    "Stock en temps réel",
-                    "Facturation illimitée",
-                    "Rapports standard",
-                    "Support email"
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="text-sm">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button className="w-full" variant="outline" asChild>
-                  <Link href="/register?plan=standard">Commencer</Link>
-                </Button>
-              </CardContent>
-            </Card>
-            </motion.div>
-
-            {/* Pro Plan */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-            <Card className="border-2 border-primary bg-primary/5 hover:shadow-xl transition-all duration-300 relative h-full hover:-translate-y-2">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <Badge className="bg-primary text-primary-foreground">
-                  <Zap className="mr-1 h-3 w-3" />
-                  Populaire
-                </Badge>
-              </div>
-              <CardHeader className="text-center pb-8">
-                <div className="mb-4">
-                  <Badge variant="default">Pro</Badge>
-                </div>
-                <CardTitle className="text-2xl mb-2">Plan Pro</CardTitle>
-                <div className="mb-4">
-                  <span className="text-4xl font-bold">24.900 FCFA</span>
-                  <span className="text-muted-foreground">/mois</span>
-                </div>
-                <CardDescription>
-                  Pour les PME en croissance et multi-magasins
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-8">
-                  {[
-                    "Magasins illimités",
-                    "Utilisateurs illimités",
-                    "Tout du plan Standard",
-                    "COD illimité",
-                    "Multi-magasins & transferts",
-                    "Analytics avancés",
-                    "Exports personnalisés",
-                    "API d'intégration",
-                    "Support prioritaire (WhatsApp)",
-                    "Formation personnalisée"
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="text-sm font-medium">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button className="w-full bg-primary hover:bg-primary/90" asChild>
-                  <Link href="/register?plan=pro">Commencer</Link>
-                </Button>
-              </CardContent>
-            </Card>
-            </motion.div>
+      {/* ── HOW IT WORKS — Maketou alternating rows ── */}
+      <section id="comment-ca-marche" className="py-20 bg-muted/20">
+        <div className="container mx-auto px-5">
+          <div className="max-w-xl mx-auto text-center mb-16">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+              Comment ça marche
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              De l&apos;idée au contrôle en 3 étapes
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Démarrez en quelques minutes, sans formation technique.
+            </p>
           </div>
 
-          <div className="mt-12 text-center">
-            <div className="inline-flex items-center gap-2 rounded-lg bg-accent/10 px-4 py-2 text-sm">
-              <Zap className="h-4 w-4 text-accent" />
-              <span><strong>Offre de lancement :</strong> 30 jours d'essai gratuit sur tous les plans, sans carte bancaire</span>
-            </div>
+          <div className="max-w-5xl mx-auto space-y-20">
+            {/* Step 1 — text left, visual right */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="grid md:grid-cols-2 gap-12 items-center"
+            >
+              <div>
+                <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground font-bold text-sm mb-5">
+                  1
+                </div>
+                <h3 className="text-2xl font-bold mb-3">
+                  Inscrivez-vous gratuitement
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-5">
+                  Créez votre compte en 2 minutes. Aucune carte bancaire
+                  requise. Accès complet à toutes les fonctionnalités pendant
+                  30 jours sans engagement.
+                </p>
+                <Button variant="outline" className="rounded-xl font-medium" asChild>
+                  <Link href="/register">
+                    Créer mon compte
+                    <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+              {/* Step 1 visual — sign up mockup */}
+              <div className="flex justify-center md:justify-end">
+                <div className="relative w-full max-w-[300px]">
+                  <div className="pointer-events-none absolute -inset-6 rounded-3xl bg-primary/5 blur-xl" />
+                  <motion.div
+                    className="relative rounded-2xl border border-border/50 bg-white dark:bg-card shadow-xl p-5 z-10 img-shimmer-hover animate-float-gentle animate-scan"
+                    whileHover={{ y: -10, scale: 1.03, boxShadow: "0 28px 56px -8px oklch(66% 0.15 145 / 0.22)" }}
+                    transition={{ type: "spring", stiffness: 280, damping: 20 }}
+                  >
+                    <p className="text-sm font-bold mb-4">Créer un compte</p>
+                    <div className="space-y-3 mb-4">
+                      {[
+                        { label: "Nom complet", val: "Amadou Diallo" },
+                        { label: "Email", val: "amadou@monshop.sn" },
+                        { label: "Mot de passe", val: "••••••••" },
+                      ].map((f) => (
+                        <div key={f.label}>
+                          <p className="text-[10px] text-muted-foreground mb-1">{f.label}</p>
+                          <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs font-medium">
+                            {f.val}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-xl bg-primary text-primary-foreground text-xs font-semibold text-center py-2.5">
+                      S&apos;inscrire gratuitement
+                    </div>
+                    <p className="text-[10px] text-muted-foreground text-center mt-2">
+                      ✓ Pas de carte bancaire requise
+                    </p>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Step 2 — visual left, text right */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="grid md:grid-cols-2 gap-12 items-center"
+            >
+              {/* Step 2 visual — setup mockup */}
+              <div className="flex justify-center md:justify-start order-2 md:order-1">
+                <div className="relative w-full max-w-[300px]">
+                  <div className="pointer-events-none absolute -inset-6 rounded-3xl bg-secondary/5 blur-xl" />
+                  <motion.div
+                    className="relative rounded-2xl border border-border/50 bg-white dark:bg-card shadow-xl p-5 z-10 img-shimmer-hover animate-float-drift animate-scan"
+                    whileHover={{ y: -10, scale: 1.03, boxShadow: "0 28px 56px -8px oklch(56% 0.15 250 / 0.22)" }}
+                    transition={{ type: "spring", stiffness: 280, damping: 20 }}
+                  >
+                    <p className="text-sm font-bold mb-4">Mon entreprise</p>
+                    <div className="flex items-center gap-3 rounded-xl bg-primary/5 p-3 mb-4">
+                      <div className="h-9 w-9 rounded-lg bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                        S
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold">Shop Dakar</p>
+                        <p className="text-[10px] text-muted-foreground">E-commerce · Dakar 🇸🇳</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      {[
+                        { label: "Produits ajoutés", val: "24", icon: "📦" },
+                        { label: "Utilisateurs invités", val: "3", icon: "👥" },
+                        { label: "Magasins configurés", val: "2", icon: "🏪" },
+                      ].map((r) => (
+                        <div
+                          key={r.label}
+                          className="flex items-center justify-between text-xs rounded-lg border border-border/40 px-3 py-2"
+                        >
+                          <span className="text-muted-foreground">
+                            {r.icon} {r.label}
+                          </span>
+                          <span className="font-bold text-primary">{r.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Entreprise prête à gérer
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+              <div className="order-1 md:order-2">
+                <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground font-bold text-sm mb-5">
+                  2
+                </div>
+                <h3 className="text-2xl font-bold mb-3">
+                  Configurez votre entreprise
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-5">
+                  Ajoutez vos produits, vos points de vente et invitez votre
+                  équipe. Notre assistant vous guide pas à pas — aucune
+                  formation technique nécessaire.
+                </p>
+                <Button variant="outline" className="rounded-xl font-medium" asChild>
+                  <Link href="/register">
+                    Voir la configuration
+                    <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+            </motion.div>
+
+            {/* Step 3 — text left, dashboard visual right */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="grid md:grid-cols-2 gap-12 items-center"
+            >
+              <div>
+                <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary text-primary-foreground font-bold text-sm mb-5">
+                  3
+                </div>
+                <h3 className="text-2xl font-bold mb-3">
+                  Gérez en toute sérénité
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-5">
+                  Enregistrez vos ventes, suivez vos colis COD, consultez vos
+                  rapports. Tout est automatisé — vous voyez, vous décidez,
+                  vous dormez tranquille.
+                </p>
+                <Button variant="outline" className="rounded-xl font-medium" asChild>
+                  <Link href="/register">
+                    Découvrir les fonctionnalités
+                    <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
+              <motion.div
+                className="flex justify-center md:justify-end animate-float-gentle [animation-delay:1.4s] animate-scan"
+                whileHover={{ y: -10, scale: 1.03 }}
+                transition={{ type: "spring", stiffness: 280, damping: 20 }}
+              >
+                <FinancesMockup />
+              </motion.div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section id="how-it-works" className="py-20 bg-background">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="text-center mb-16">
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Comment ça marche ?
-              </h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Démarrez en quelques minutes et prenez le contrôle de votre business
-              </p>
-            </div>
-          </FadeInWhenVisible>
+      {/* ── FEATURES — Chariow tabs + visual mockup ── */}
+      <section id="fonctionnalites" className="py-20">
+        <div className="container mx-auto px-5">
+          <div className="max-w-xl mx-auto text-center mb-12">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+              Fonctionnalités
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Tout pour piloter votre business
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Un seul outil, toutes les briques pour gérer, analyser et
+              développer.
+            </p>
+          </div>
 
-          <div className="max-w-4xl mx-auto">
-            <div className="grid gap-8 md:grid-cols-3">
+          {/* Feature tabs — Chariow-style */}
+          <div className="max-w-5xl mx-auto">
+            <div className="flex gap-2 mb-10 justify-center flex-wrap">
+              {FEATURE_TABS.map((tab, i) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveFeature(i)}
+                    className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      activeFeature === i
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-white dark:bg-card border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/30"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active feature content */}
+            <motion.div
+              key={activeFeature}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="grid md:grid-cols-2 gap-12 items-center rounded-3xl border border-border/50 bg-white dark:bg-card p-8 md:p-12 shadow-sm"
+            >
+              {/* Left: description */}
+              <div>
+                <h3 className="text-2xl font-bold mb-4">
+                  {FEATURE_TABS[activeFeature].headline}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed mb-6">
+                  {FEATURE_TABS[activeFeature].desc}
+                </p>
+                <ul className="space-y-3 mb-7">
+                  {FEATURE_TABS[activeFeature].points.map((point) => (
+                    <li key={point} className="flex items-start gap-2.5 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+                <Button className="rounded-xl font-semibold" asChild>
+                  <Link href="/register">
+                    Essayer gratuitement
+                    <ChevronRight className="ml-1.5 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+
+              {/* Right: visual mockup */}
+              <div className="relative flex justify-center md:justify-end">
+                {/* Animated glow behind mockup */}
+                <div className="pointer-events-none absolute -inset-6 rounded-3xl bg-primary/8 blur-2xl animate-breathe" />
+                {/* Rotating ring decoration */}
+                <div className="pointer-events-none absolute -inset-3 rounded-3xl border border-primary/10 animate-ring-spin" />
+                <motion.div
+                  className="relative z-10 animate-float-gentle animate-card-glow animate-scan"
+                  initial={{ opacity: 0, scale: 0.94, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  whileHover={{ y: -12, scale: 1.04 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                >
+                  {FEATURE_TABS[activeFeature].mockup}
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Feature grid — extras */}
+            <div className="grid gap-4 md:grid-cols-3 mt-8">
               {[
                 {
-                  step: "1",
-                  title: "Inscrivez-vous",
-                  description: "Créez votre compte en 2 minutes. Aucune carte bancaire requise pour l'essai gratuit.",
-                  icon: <FileText className="h-12 w-12 text-primary" />
+                  icon: <Building2 className="h-5 w-5 text-primary" />,
+                  title: "Multi-magasins",
+                  desc: "Gérez plusieurs points de vente depuis un tableau de bord unique avec transferts inter-magasins.",
                 },
                 {
-                  step: "2",
-                  title: "Configurez votre entreprise",
-                  description: "Ajoutez vos produits, vos magasins, invitez votre équipe. Notre assistant vous guide pas à pas.",
-                  icon: <Building2 className="h-12 w-12 text-primary" />
+                  icon: <Users className="h-5 w-5 text-primary" />,
+                  title: "Multi-utilisateurs",
+                  desc: "Invitez votre équipe, définissez les rôles et permissions, suivez toute l'activité.",
                 },
                 {
-                  step: "3",
-                  title: "Gérez en toute sérénité",
-                  description: "Enregistrez vos ventes, suivez vos COD, consultez vos rapports. Tout est automatisé.",
-                  icon: <Rocket className="h-12 w-12 text-primary" />
-                }
-              ].map((step, idx) => (
+                  icon: <Lock className="h-5 w-5 text-primary" />,
+                  title: "Sécurité totale",
+                  desc: "Chiffrement SSL/TLS, backups automatiques, conformité aux standards internationaux.",
+                },
+              ].map((f, i) => (
                 <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: idx * 0.2 }}
+                  key={i}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.07 }}
                   viewport={{ once: true }}
-                  className="text-center"
+                  className="rounded-2xl border border-border/50 bg-white dark:bg-card p-5 hover:border-primary/25 hover:shadow-sm transition-all"
                 >
-                  <motion.div
-                    className="mb-4 mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-2xl font-bold"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    {step.step}
-                  </motion.div>
-                  <div className="mb-3 mx-auto w-fit">{step.icon}</div>
-                  <h4 className="mb-2 text-xl font-bold">{step.title}</h4>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                  <div className="mb-3 h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                    {f.icon}
+                  </div>
+                  <h4 className="font-semibold text-sm mb-1.5">{f.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {f.desc}
+                  </p>
                 </motion.div>
               ))}
             </div>
@@ -919,203 +1250,399 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section id="faq" className="py-20 bg-muted/20">
-        <div className="container mx-auto px-4">
-          <FadeInWhenVisible>
-            <div className="text-center mb-16">
-              <h3 className="mb-4 text-3xl font-bold md:text-4xl">
-                Questions fréquentes
-              </h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Tout ce que vous devez savoir sur GestiCash
-              </p>
-            </div>
-          </FadeInWhenVisible>
+      {/* ── TESTIMONIALS ── */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-muted/25" />
+        {/* Decorative rings */}
+        <div className="pointer-events-none absolute -left-32 top-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full border-2 border-primary/6" />
+        <div className="pointer-events-none absolute -left-12 top-1/2 -translate-y-1/2 h-[280px] w-[280px] rounded-full border border-primary/5" />
 
-          <div className="max-w-3xl mx-auto space-y-4">
+        <div className="container relative z-10 mx-auto px-5">
+          <div className="max-w-xl mx-auto text-center mb-12">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+              Témoignages
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ils ont repris le contrôle
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Des entrepreneurs à travers l&apos;Afrique témoignent de
+              l&apos;impact de GestiCash sur leur quotidien.
+            </p>
+          </div>
+          <div className="max-w-5xl mx-auto">
+            <TestimonialsCarousel />
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ── */}
+      <section id="tarifs" className="py-20">
+        <div className="container mx-auto px-5">
+          <div className="max-w-xl mx-auto text-center mb-14">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+              Tarification
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Simple et transparent
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Aucun frais caché. Aucun engagement. Changez de plan à tout
+              moment.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 max-w-4xl mx-auto">
+            {/* Standard */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="rounded-2xl border border-border/60 bg-white dark:bg-card p-8 shadow-sm"
+            >
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+                Standard
+              </p>
+              <div className="flex items-end gap-1.5 mb-1">
+                <span className="text-4xl font-bold">9 900</span>
+                <span className="text-base font-semibold text-muted-foreground mb-0.5">
+                  FCFA
+                </span>
+                <span className="text-sm text-muted-foreground mb-0.5">/mois</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Pour les entrepreneurs solo et petites boutiques
+              </p>
+              <div className="rounded-xl bg-muted/40 p-4 mb-6 text-xs space-y-1.5">
+                {[
+                  ["1 magasin", "✓"],
+                  ["3 utilisateurs max", "✓"],
+                  ["100 commandes / mois", "✓"],
+                ].map(([label, val]) => (
+                  <div key={label} className="flex justify-between text-muted-foreground">
+                    <span>{label}</span>
+                    <span className="font-bold text-foreground">{val}</span>
+                  </div>
+                ))}
+              </div>
+              <ul className="space-y-2.5 mb-7">
+                {[
+                  "Gestion financière complète",
+                  "Ventes & COD",
+                  "Stock en temps réel",
+                  "Facturation illimitée",
+                  "Rapports standard",
+                  "Support email",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2.5 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <button className="w-full rounded-xl border-2 border-border py-2.5 text-sm font-semibold hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                <Link href="/register?plan=standard" className="block">
+                  Commencer
+                </Link>
+              </button>
+            </motion.div>
+
+            {/* Pro */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+              className="rounded-2xl border-2 border-primary bg-primary/5 p-8 relative shadow-sm"
+            >
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1 text-xs font-semibold text-primary-foreground">
+                  <Zap className="h-3 w-3" /> Populaire
+                </span>
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">
+                Pro
+              </p>
+              <div className="flex items-end gap-1.5 mb-1">
+                <span className="text-4xl font-bold">24 900</span>
+                <span className="text-base font-semibold text-muted-foreground mb-0.5">
+                  FCFA
+                </span>
+                <span className="text-sm text-muted-foreground mb-0.5">/mois</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Pour les PME en croissance et multi-magasins
+              </p>
+              <div className="rounded-xl bg-primary/10 p-4 mb-6 text-xs space-y-1.5">
+                {[
+                  ["Magasins illimités", "✓"],
+                  ["Utilisateurs illimités", "✓"],
+                  ["COD illimité", "✓"],
+                ].map(([label, val]) => (
+                  <div key={label} className="flex justify-between text-muted-foreground">
+                    <span>{label}</span>
+                    <span className="font-bold text-foreground">{val}</span>
+                  </div>
+                ))}
+              </div>
+              <ul className="space-y-2.5 mb-7">
+                {[
+                  "Tout du plan Standard",
+                  "Multi-magasins & transferts",
+                  "Analytics avancés",
+                  "Export personnalisé",
+                  "API d'intégration",
+                  "Support WhatsApp prioritaire",
+                  "Formation personnalisée",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2.5 text-sm font-medium">
+                    <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Button className="w-full rounded-xl" asChild>
+                <Link href="/register?plan=pro">Commencer</Link>
+              </Button>
+            </motion.div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <div className="inline-flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/6 px-5 py-2.5 text-sm">
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <span>
+                <strong>Offre de lancement&nbsp;:</strong> 30 jours
+                d&apos;essai gratuit — sans carte bancaire, sans engagement
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section id="faq" className="py-20 bg-muted/20">
+        <div className="container mx-auto px-5">
+          <div className="max-w-xl mx-auto text-center mb-12">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+              FAQ
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Questions fréquentes
+            </h2>
+          </div>
+          <div className="max-w-2xl mx-auto space-y-3">
             {[
               {
                 q: "GestiCash fonctionne-t-il hors ligne ?",
-                a: "Actuellement, GestiCash nécessite une connexion internet. Le mode hors-ligne avec synchronisation est prévu pour une prochaine version."
+                a: "Actuellement, GestiCash nécessite une connexion internet. Le mode hors-ligne avec synchronisation est prévu prochainement.",
               },
               {
                 q: "Puis-je changer de plan à tout moment ?",
-                a: "Oui, absolument ! Vous pouvez passer du plan Standard au plan Pro (ou inversement) à tout moment. Les changements sont effectifs immédiatement."
+                a: "Oui. Passage de Standard à Pro (ou inversement) à tout moment, effet immédiat.",
               },
               {
                 q: "Mes données sont-elles sécurisées ?",
-                a: "Oui. Nous utilisons un chiffrement de niveau bancaire (SSL/TLS), des backups automatiques quotidiens, et vos données sont hébergées sur des serveurs sécurisés conformes aux normes internationales."
+                a: "Chiffrement SSL/TLS, backups automatiques quotidiens, hébergement conforme aux standards internationaux.",
               },
               {
                 q: "Puis-je importer mes données existantes ?",
-                a: "Oui, vous pouvez importer vos produits, clients et transactions via Excel/CSV. Notre équipe support peut vous accompagner dans la migration."
+                a: "Oui. Import via Excel/CSV pour vos produits, clients et transactions. Notre équipe vous accompagne.",
               },
               {
                 q: "Y a-t-il des frais cachés ?",
-                a: "Non. Le prix affiché est le prix final. Pas de frais de configuration, pas de frais par transaction, pas de surprises."
-              },
-              {
-                q: "Comment fonctionne l'essai gratuit ?",
-                a: "30 jours d'accès complet sans engagement et sans carte bancaire. Vous pouvez annuler à tout moment."
-              },
-              {
-                q: "Quel support proposez-vous ?",
-                a: "Plan Standard : support par email (réponse sous 24h). Plan Pro : support prioritaire par WhatsApp + email (réponse sous 2h) + formation personnalisée."
+                a: "Non. Le prix affiché est le prix final. Aucun frais de configuration, aucun frais par transaction.",
               },
               {
                 q: "GestiCash est-il adapté à mon pays ?",
-                a: "Oui ! GestiCash est conçu spécifiquement pour l'Afrique. Nous supportons plusieurs devises (FCFA, Euro, Dollar, etc.) et nous adaptons aux réalités locales (COD, mobile money, etc.)."
-              }
-            ].map((faq, idx) => (
+                a: "Oui ! Conçu pour l'Afrique. Plusieurs devises supportées (FCFA, EUR, USD…), adapté au COD et au mobile money.",
+              },
+            ].map((faq, i) => (
               <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 20 }}
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                transition={{ duration: 0.3, delay: i * 0.04 }}
                 viewport={{ once: true }}
+                className="rounded-xl border border-border/50 bg-white dark:bg-card px-5 py-4 hover:border-primary/25 transition-colors"
               >
-                <Card className="hover:shadow-lg transition-all duration-300 hover:border-primary/30">
-                  <CardHeader>
-                    <CardTitle className="text-base">{faq.q}</CardTitle>
-                    <CardDescription className="text-sm mt-2">{faq.a}</CardDescription>
-                  </CardHeader>
-                </Card>
+                <p className="text-sm font-semibold mb-1.5">{faq.q}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {faq.a}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/10 via-background to-secondary/5 relative overflow-hidden">
-        {/* Animated gradient orbs */}
-        <motion.div
-          className="absolute top-0 right-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/20 rounded-full blur-3xl"
-          animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.5, 0.3, 0.5],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        
-        <div className="container mx-auto px-4 relative z-10">
-          <FadeInWhenVisible>
-            <div className="mx-auto max-w-3xl text-center">
-              <h3 className="mb-6 text-3xl font-bold md:text-5xl">
-                Prêt à reprendre le contrôle de votre argent ?
-              </h3>
-              <p className="mb-8 text-lg text-muted-foreground">
-                Rejoignez les centaines d'entrepreneurs africains qui utilisent GestiCash pour gérer leur business en toute sérénité.
-              </p>
-              <div className="flex flex-col gap-4 sm:flex-row sm:justify-center mb-6">
-                <Button size="lg" className="bg-primary hover:bg-primary/90 font-semibold text-lg group" asChild>
-                  <Link href="/register">
-                    Commencer gratuitement
-                    <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" className="font-semibold text-lg">
-                  Planifier une démo
-                </Button>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <span>30 jours d'essai gratuit</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <span>Sans engagement</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <span>Support en français</span>
-                </div>
-              </div>
+      {/* ── FINAL CTA ── */}
+      <section className="relative py-28 overflow-hidden">
+        {/* Background dot grid */}
+        <div className="pointer-events-none absolute inset-0 bg-dot-grid" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background" />
+        {/* Decorative rings */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full border-2 border-primary/8" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[380px] w-[380px] rounded-full border border-primary/10" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[180px] w-[180px] rounded-full border border-primary/12" />
+        {/* Soft blobs */}
+        <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-primary/6 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-secondary/6 blur-3xl" />
+
+        <div className="container relative z-10 mx-auto px-5">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">
+              Prêt ?
+            </p>
+            <h2 className="text-3xl md:text-5xl font-bold mb-5 leading-tight">
+              Reprenez le contrôle de votre business
+            </h2>
+            <p className="text-muted-foreground mb-8 text-base max-w-lg mx-auto leading-relaxed">
+              Rejoignez des centaines d&apos;entrepreneurs qui gèrent leur
+              business sereinement avec GestiCash.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center mb-6">
+              <Button
+                size="lg"
+                className="rounded-xl font-semibold px-8 text-base"
+                asChild
+              >
+                <Link href="/register">
+                  Commencer gratuitement
+                  <ChevronRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-xl font-semibold text-base border-2"
+              >
+                Planifier une démo
+              </Button>
             </div>
-          </FadeInWhenVisible>
+            <div className="flex flex-wrap justify-center gap-5 text-xs text-muted-foreground">
+              {[
+                "30 jours d'essai gratuit",
+                "Sans engagement",
+                "Support en français",
+              ].map((item) => (
+                <span key={item} className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t bg-card">
-        <div className="container mx-auto px-4 py-12">
-          <div className="grid gap-8 md:grid-cols-4">
-            {/* Brand */}
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2 mb-4">
-                <Image
-                  src="/logo/logo.png"
-                  alt="GestiCash Logo"
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 object-contain"
-                />
-                <div>
-                  <h4 className="font-bold">GestiCash™</h4>
-                  <p className="text-[10px] text-muted-foreground">Votre argent, enfin sous contrôle.</p>
-                </div>
+      {/* ── FOOTER ── */}
+      <footer className="relative border-t border-zinc-800 bg-zinc-950 overflow-hidden">
+        {/* Ligne de lumière verte en haut */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+        {/* Lueur verte subtile */}
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-64 w-[500px] rounded-full bg-primary/8 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full bg-primary/5 blur-3xl" />
+
+        <div className="container relative z-10 mx-auto px-5 py-14">
+          <div className="grid gap-8 md:grid-cols-4 mb-12">
+            {/* Brand column */}
+            <div>
+              <div className="flex items-center gap-2.5 mb-4">
+                <motion.div
+                  whileHover={{ scale: 1.15, rotate: -10 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 14 }}
+                >
+                  <Image
+                    src="/logo/logo.png"
+                    alt="GestiCash"
+                    width={32}
+                    height={32}
+                    className="h-[32px] w-[32px] object-contain"
+                  />
+                </motion.div>
+                <span className="font-bold text-white text-base">GestiCash™</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                SaaS de gestion commerciale & financière pour l'Afrique.
+              <p className="text-sm text-zinc-400 leading-relaxed mb-5">
+                Solution de gestion commerciale &amp; financière pensée pour
+                les entrepreneurs d&apos;Afrique.
               </p>
+              {/* Badges réseaux */}
+              <div className="flex gap-2.5">
+                {[
+                  { label: "𝕏", name: "Twitter / X" },
+                  { label: "in", name: "LinkedIn" },
+                  { label: "f", name: "Facebook" },
+                  { label: "📱", name: "WhatsApp" },
+                ].map((s) => (
+                  <a
+                    key={s.name}
+                    href="#"
+                    aria-label={s.name}
+                    title={s.name}
+                    className="h-8 w-8 rounded-lg bg-zinc-800 flex items-center justify-center text-xs font-bold text-zinc-400 hover:bg-primary/20 hover:text-primary transition-colors"
+                  >
+                    {s.label}
+                  </a>
+                ))}
+              </div>
             </div>
 
-            {/* Product */}
-            <div>
-              <h5 className="font-semibold mb-4">Produit</h5>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#features" className="hover:text-primary transition-colors">Fonctionnalités</a></li>
-                <li><a href="#pricing" className="hover:text-primary transition-colors">Tarifs</a></li>
-                <li><a href="#how-it-works" className="hover:text-primary transition-colors">Comment ça marche</a></li>
-                <li><Link href="/login" className="hover:text-primary transition-colors">Se connecter</Link></li>
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div>
-              <h5 className="font-semibold mb-4">Entreprise</h5>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">À propos</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Nous contacter</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Carrières</a></li>
-              </ul>
-            </div>
-
-            {/* Legal */}
-            <div>
-              <h5 className="font-semibold mb-4">Légal</h5>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-primary transition-colors">Conditions d'utilisation</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Politique de confidentialité</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Mentions légales</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">RGPD</a></li>
-              </ul>
-            </div>
+            {/* Link columns */}
+            {[
+              {
+                title: "Produit",
+                links: [
+                  ["Fonctionnalités", "#fonctionnalites"],
+                  ["Tarifs", "#tarifs"],
+                  ["Comment ça marche", "#comment-ca-marche"],
+                  ["Se connecter", "/login"],
+                ],
+              },
+              {
+                title: "Entreprise",
+                links: [
+                  ["À propos", "#"],
+                  ["Blog", "#"],
+                  ["Nous contacter", "#"],
+                  ["Carrières", "#"],
+                ],
+              },
+              {
+                title: "Légal",
+                links: [
+                  ["Conditions d'utilisation", "#"],
+                  ["Politique de confidentialité", "#"],
+                  ["Mentions légales", "#"],
+                  ["RGPD", "#"],
+                ],
+              },
+            ].map((col) => (
+              <div key={col.title}>
+                <h6 className="font-semibold text-sm mb-4 text-white">{col.title}</h6>
+                <ul className="space-y-2.5 text-sm text-zinc-400">
+                  {col.links.map(([label, href]) => (
+                    <li key={label}>
+                      <a
+                        href={href}
+                        className="hover:text-white transition-colors"
+                      >
+                        {label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
-          <div className="mt-12 pt-8 border-t text-center">
-            <p className="text-sm text-muted-foreground">
-              © 2026 GestiCash™. Tous droits réservés. Fait avec ❤️ pour l'Afrique.
-            </p>
+          {/* Bottom bar */}
+          <div className="pt-6 border-t border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-500">
+            <span>© 2026 GestiCash™. Tous droits réservés.</span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              Fait avec ❤️ pour l&apos;Afrique
+            </span>
           </div>
         </div>
       </footer>

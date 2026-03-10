@@ -154,6 +154,269 @@
   .smooth-scroll-section {
     scroll-margin-top: 80px;
   }
+
+  /* Landing: gradient mesh (youthful vibe) */
+  .bg-gradient-mesh {
+    background-color: var(--color-background);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, oklch(66% 0.15 145 / 0.25), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 50%, oklch(56% 0.15 250 / 0.15), transparent),
+      radial-gradient(ellipse 50% 30% at 0% 80%, oklch(75% 0.15 75 / 0.12), transparent);
+  }
+
+  .dark .bg-gradient-mesh {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, oklch(70% 0.15 145 / 0.2), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 50%, oklch(60% 0.15 250 / 0.12), transparent),
+      radial-gradient(ellipse 50% 30% at 0% 80%, oklch(78% 0.15 75 / 0.1), transparent);
+  }
+
+  /* CTA glow */
+  .btn-glow {
+    box-shadow: 0 0 24px oklch(66% 0.15 145 / 0.4);
+  }
+  .btn-glow:hover {
+    box-shadow: 0 0 32px oklch(66% 0.15 145 / 0.5);
+  }
+
+  @keyframes blob-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(30px, -20px) scale(1.05); }
+    66% { transform: translate(-20px, 20px) scale(0.95); }
+  }
+  .animate-blob {
+    animation: blob-float 12s ease-in-out infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .hero-gradient-text {
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 40%, var(--color-secondary) 60%, var(--color-secondary) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-shift 4s ease infinite;
+  }
+
+  /* Soft landing: light gradient, no animation */
+  .bg-soft-hero {
+    background-color: var(--color-background);
+    background-image:
+      radial-gradient(ellipse 70% 40% at 50% 0%, oklch(66% 0.12 145 / 0.12), transparent 60%),
+      radial-gradient(ellipse 50% 30% at 80% 20%, oklch(56% 0.1 250 / 0.08), transparent 50%);
+  }
+  .dark .bg-soft-hero {
+    background-image:
+      radial-gradient(ellipse 70% 40% at 50% 0%, oklch(70% 0.12 145 / 0.1), transparent 60%),
+      radial-gradient(ellipse 50% 30% at 80% 20%, oklch(60% 0.1 250 / 0.06), transparent 50%);
+  }
+  .hero-soft-text {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* Marquee ticker */
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  .animate-marquee {
+    animation: marquee-scroll 35s linear infinite;
+    will-change: transform;
+  }
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+
+  /* Dot grid - hero background */
+  .bg-dot-grid {
+    background-image: radial-gradient(circle, oklch(50% 0.05 250 / 0.14) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .dark .bg-dot-grid {
+    background-image: radial-gradient(circle, oklch(70% 0.1 145 / 0.08) 1px, transparent 1px);
+  }
+
+  /* Cross grid - sections */
+  .bg-cross-grid {
+    background-image:
+      linear-gradient(oklch(50% 0.05 250 / 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(50% 0.05 250 / 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  .dark .bg-cross-grid {
+    background-image:
+      linear-gradient(oklch(70% 0.1 145 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(70% 0.1 145 / 0.04) 1px, transparent 1px);
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    background: oklch(100% 0 0 / 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid oklch(90% 0.005 250 / 0.6);
+  }
+  .dark .glass-card {
+    background: oklch(22% 0.01 250 / 0.85);
+    border: 1px solid oklch(35% 0.01 250 / 0.5);
+  }
+
+  /* Float animations for mockup elements */
+  @keyframes float-up {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-8px); }
+  }
+  @keyframes float-down {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(8px); }
+  }
+  @keyframes float-side {
+    0%, 100% { transform: translateY(-50%) translateX(0px); }
+    50%       { transform: translateY(-50%) translateX(-5px); }
+  }
+  .animate-float-up   { animation: float-up   3.2s ease-in-out infinite; }
+  .animate-float-down { animation: float-down 3.8s ease-in-out infinite 0.6s; }
+  .animate-float-side { animation: float-side 4.0s ease-in-out infinite 1.2s; }
+
+  /* Image shimmer on hover */
+  @keyframes shimmer-sweep {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  .img-shimmer-hover {
+    position: relative;
+    overflow: hidden;
+  }
+  .img-shimmer-hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      oklch(100% 0 0 / 0.25) 50%,
+      transparent 60%
+    );
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .img-shimmer-hover:hover::after {
+    opacity: 1;
+    animation: shimmer-sweep 0.7s ease forwards;
+  }
+
+  /* Glow pulse for card images */
+  @keyframes card-glow {
+    0%, 100% { box-shadow: 0 0 0px oklch(66% 0.15 145 / 0); }
+    50%       { box-shadow: 0 0 32px oklch(66% 0.15 145 / 0.22); }
+  }
+  .animate-card-glow {
+    animation: card-glow 3s ease-in-out infinite;
+  }
+
+  /* Gentle rotation (logo on idle) */
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .animate-spin-slow {
+    animation: spin-slow 18s linear infinite;
+  }
+
+  /* Soft scale breathing */
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.04); }
+  }
+  .animate-breathe {
+    animation: breathe 4s ease-in-out infinite;
+  }
+
+  /* Entrance pop (used with JS trigger) */
+  @keyframes pop-in {
+    0%   { opacity: 0; transform: scale(0.85) translateY(12px); }
+    60%  { transform: scale(1.04) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .animate-pop-in {
+    animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Gentle float with micro-tilt — for mockup step cards */
+  @keyframes float-gentle {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    30%       { transform: translateY(-8px) rotate(0.5deg); }
+    70%       { transform: translateY(-4px) rotate(-0.3deg); }
+  }
+  .animate-float-gentle {
+    animation: float-gentle 6s ease-in-out infinite;
+  }
+
+  /* Slow sideways drift — variation for second step card */
+  @keyframes float-drift {
+    0%, 100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+    25%       { transform: translateY(-6px) translateX(3px) rotate(0.4deg); }
+    75%       { transform: translateY(4px) translateX(-3px) rotate(-0.3deg); }
+  }
+  .animate-float-drift {
+    animation: float-drift 7s ease-in-out infinite 0.8s;
+  }
+
+  /* Scan-line sweep across mockup cards */
+  @keyframes scan-line-sweep {
+    0%   { top: -4%;  opacity: 0; }
+    8%   { opacity: 0.7; }
+    92%  { opacity: 0.3; }
+    100% { top: 108%; opacity: 0; }
+  }
+  .animate-scan {
+    position: relative;
+    overflow: hidden;
+  }
+  .animate-scan::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      oklch(66% 0.15 145 / 0.55) 50%,
+      transparent 100%
+    );
+    animation: scan-line-sweep 5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 30;
+  }
+
+  /* Animated gradient ring around featured mockup */
+  @keyframes ring-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .animate-ring-spin {
+    animation: ring-spin 8s linear infinite;
+  }
+
+  /* Data row highlight flash */
+  @keyframes row-flash {
+    0%, 100% { background-color: transparent; }
+    50%       { background-color: oklch(66% 0.15 145 / 0.08); }
+  }
+  .animate-row-flash {
+    animation: row-flash 3s ease-in-out infinite;
+  }
+  .animate-row-flash:nth-child(2) { animation-delay: 1s; }
+  .animate-row-flash:nth-child(3) { animation-delay: 2s; }
 }
 
 .dark {

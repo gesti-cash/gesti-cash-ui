@@ -221,6 +221,7 @@ export default function SelectOrganizationPage() {
     if (!org) return;
     const tenant = buildTenantFromOrganization(org);
     useTenantStore.getState().setTenant(tenant);
+    useTenantStore.getState().setSelectedOrganizationId(tenant.id, selectedOrgId);
     setOrganizationSelectedCookie();
     router.push("/dashboard");
   };

@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { phoneSchema, phoneSchemaOptional, formatPhoneDisplay } from "@/shared/constants";
+import { PhoneInput } from "@/shared/ui/phone-input";
 import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -43,7 +45,7 @@ import {
 
 const createCustomerSchema = z.object({
   name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
-  phone: z.string().min(1, "Le téléphone est requis"),
+  phone: phoneSchema,
   organization_id: z
     .string()
     .min(1, "Veuillez sélectionner une organisation"),
@@ -51,7 +53,7 @@ const createCustomerSchema = z.object({
 
 const updateCustomerSchema = z.object({
   name: z.string().min(2, "Le nom doit comporter au moins 2 caractères").optional(),
-  phone: z.string().min(1, "Le téléphone est requis").optional(),
+  phone: phoneSchemaOptional,
   organization_id: z.string().optional(),
 });
 
@@ -77,6 +79,7 @@ export default function CustomersPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -383,7 +386,7 @@ export default function CustomersPage() {
                         <td className="px-6 py-4">
                           <span className="text-sm text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
                             <Phone className="h-3.5 w-3.5 text-zinc-400" />
-                            {customer.phone || "—"}
+                            {formatPhoneDisplay(customer.phone ?? "")}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -466,7 +469,7 @@ export default function CustomersPage() {
                   <div className="p-6 space-y-4">
                     <DetailRow
                       label="Téléphone"
-                      value={selectedCustomer.phone || "—"}
+                      value={formatPhoneDisplay(selectedCustomer.phone ?? "")}
                     />
                     <DetailRow
                       label="Organisation"
@@ -618,11 +621,22 @@ export default function CustomersPage() {
                         <Phone className="h-3.5 w-3.5 text-zinc-400" />
                         Téléphone <span className="text-red-500">*</span>
                       </Label>
-                      <Input
-                        id="cust-phone"
-                        placeholder="ex: +33 6 12 34 56 78"
-                        {...register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                      <Controller
+                        name="phone"
+                        control={control}
+                        defaultValue=""
+                        render={({ field }) => (
+                          <PhoneInput
+                            id="cust-phone"
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            placeholder="6 12 34 56 78"
+                            className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:border-emerald-500 focus-visible:ring-emerald-500/20"
+                            containerClassName="focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-500"
+                            error={!!errors.phone}
+                          />
+                        )}
                       />
                       {errors.phone && (
                         <p className="text-xs text-red-500">{errors.phone.message}</p>
@@ -737,9 +751,19 @@ export default function CustomersPage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Téléphone</Label>
-                      <Input
-                        {...updateForm.register("phone")}
-                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                      <Controller
+                        name="phone"
+                        control={updateForm.control}
+                        render={({ field }) => (
+                          <PhoneInput
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            placeholder="6 12 34 56 78"
+                            className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                            error={!!updateForm.formState.errors.phone}
+                          />
+                        )}
                       />
                       {updateForm.formState.errors.phone && (
                         <p className="text-xs text-red-500">

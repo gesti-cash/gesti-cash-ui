@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTenantFromDomain, isDeploymentPlatformDomain } from "./shared/config/env";
 
 // Routes publiques qui ne nécessitent pas d'authentification
-const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/tenant-required"];
+const publicRoutes = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/tenant-required"];
 
 // Routes qui nécessitent un tenant
 const tenantRoutes = [
