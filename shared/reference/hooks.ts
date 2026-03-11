@@ -30,11 +30,11 @@ export function useCities(countryId?: string | null) {
     queryKey: queryKeys.reference.cities(countryId ?? undefined),
     queryFn: async () => {
       const response = await apiClient.get<City[]>("/reference/cities", {
-        params: countryId ? { country_id: countryId } : undefined,
+        params: countryId ? { countryId } : undefined,
       });
       return response.data;
     },
-    enabled: true,
+    enabled: !!countryId,
     staleTime: 1000 * 60 * 30,
   });
 }
