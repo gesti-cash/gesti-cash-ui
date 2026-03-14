@@ -39,20 +39,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-const FALLBACK_CATEGORIES = [
-  { id: "electronique", label: "Électronique" },
-  { id: "telephonie", label: "Téléphonie" },
-  { id: "informatique", label: "Informatique" },
-  { id: "mode", label: "Mode & Vêtements" },
-  { id: "accessoires", label: "Accessoires" },
-  { id: "beaute", label: "Beauté & Cosmétiques" },
-  { id: "maison", label: "Maison & Déco" },
-  { id: "sport", label: "Sport & Loisirs" },
-  { id: "alimentation", label: "Alimentation" },
-  { id: "bijouterie", label: "Bijouterie" },
-  { id: "autre", label: "Autre" },
-];
-
 const createProductSchema = z.object({
   name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
   sku: z.string().min(2, "Le SKU doit comporter au moins 2 caractères"),
@@ -130,7 +116,6 @@ export default function ProductsPage() {
   const setSelectedOrganizationId = useSetSelectedOrganizationId();
   const { data: organizations = [] } = useOrganizations(tenantId);
   const defaultOrg = organizations.find((o) => o.is_default) ?? organizations[0];
-  const { data: apiCategories = [] } = useCategories(tenantId, defaultOrg?.id);
 
   const {
     register,
@@ -160,6 +145,14 @@ export default function ProductsPage() {
   }, [tenantId, organizations, persistedOrgId, defaultOrg?.id, setValue]);
 
   const selectedOrgId = watch("organization_id");
+  const { data: apiCategories = [], isLoading: categoriesLoading } = useCategories(
+    tenantId,
+    selectedOrgId || defaultOrg?.id
+  );
+  const activeCategories = useMemo(
+    () => apiCategories.filter((c) => c.is_active),
+    [apiCategories]
+  );
 
   const {
     register: registerEdit,
@@ -1106,7 +1099,7 @@ export default function ProductsPage() {
                     )}
                   </div>
 
-                  {/* Catégorie */}
+                  {/* Catégorie (GET /api/v1/categories) */}
                   <div className="space-y-1.5">
                     <Label htmlFor="create-category" className="flex items-center gap-2 text-sm font-medium">
                       <Filter className="h-3.5 w-3.5 text-zinc-400" />
@@ -1115,20 +1108,21 @@ export default function ProductsPage() {
                     <select
                       id="create-category"
                       {...register("category_id")}
+                      disabled={categoriesLoading}
                       className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/30 focus-visible:ring-offset-2 focus-visible:border-green-500/50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <option value="">Sélectionner une catégorie</option>
-                      {apiCategories.length > 0
-                        ? apiCategories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))
-                        : FALLBACK_CATEGORIES.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.label}
-                            </option>
-                          ))}
+                      <option value="">
+                        {categoriesLoading
+                          ? "Chargement des catégories..."
+                          : activeCategories.length === 0
+                            ? "Aucune catégorie (créez-en dans Catégories)"
+                            : "Sélectionner une catégorie"}
+                      </option>
+                      {activeCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
                     </select>
                     {errors.category_id && (
                       <p className="text-xs text-red-500">{errors.category_id.message}</p>
@@ -1378,9 +1372,13 @@ export default function ProductsPage() {
                               <Label className="text-xs font-medium">Catégorie</Label>
                               <select
                                 {...registerEdit("category_id")}
-                                className="flex h-9 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm"
+                                disabled={categoriesLoading}
+                                className="flex h-9 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                               >
-                                {apiCategories.map((cat) => (
+                                <option value="">
+                                  {categoriesLoading ? "Chargement des catégories..." : "Sélectionner une catégorie"}
+                                </option>
+                                {activeCategories.map((cat) => (
                                   <option key={cat.id} value={cat.id}>
                                     {cat.name}
                                   </option>

@@ -73,14 +73,27 @@ export const useCreateProduct = (
       const response = await apiClient.post<Product>("/products", input, {
         params: { tenantId, organizationId },
       });
+      const product = response.data;
 
-      return response.data;
+      try {
+        await apiClient.post(
+          "/stocks",
+          { product_id: product.id, quantity: 0 },
+          { params: { tenantId, organizationId } }
+        );
+      } catch (stockError) {
+        const apiError = extractApiError(stockError);
+        console.error("Init stock for new product error:", apiError);
+        throw new Error(
+          "Produit créé mais l'initialisation du stock a échoué. Vous pouvez l'ajuster depuis la vue Stock."
+        );
+      }
+      return product;
     },
     onSuccess: () => {
       if (tenantId) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.products.all(tenantId),
-        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.products.all(tenantId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.stocks.all(tenantId) });
       }
     },
     onError: (error) => {

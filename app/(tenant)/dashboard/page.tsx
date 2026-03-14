@@ -122,21 +122,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-black dark:via-zinc-950 dark:to-black p-6 lg:p-8 relative overflow-hidden">
-      {/* Background decorative elements */}
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-black dark:via-zinc-950 dark:to-black p-4 sm:p-6 lg:p-8 relative">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-500/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10">
-        {/* Header avec gradient et logo - Amélioré */}
-        <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-500/30 to-emerald-600/30 blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300"></div>
-                <div className="relative h-16 w-16 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-600/20 p-3 shadow-2xl shadow-green-500/20 ring-2 ring-green-500/20 dark:from-green-500/10 dark:to-emerald-600/10 dark:ring-green-500/10 group-hover:scale-105 transition-transform duration-300">
+      <div className="relative z-10 max-w-7xl mx-auto">
+        <div className="mb-6 sm:mb-10 animate-in fade-in slide-in-from-top-4 duration-700 overflow-visible">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <div className="relative group flex-shrink-0">
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-500/30 to-emerald-600/30 blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-300" />
+                <div className="relative h-10 w-10 sm:h-16 sm:w-16 rounded-lg sm:rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-600/20 p-1.5 sm:p-3 shadow-2xl shadow-green-500/20 ring-2 ring-green-500/20 dark:from-green-500/10 dark:to-emerald-600/10 dark:ring-green-500/10">
                   <Image
                     src="/logo/logo.png"
                     alt="GestiCash Logo"
@@ -147,49 +145,49 @@ export default function DashboardPage() {
                   />
                 </div>
               </div>
-              <div>
-                <h1 className="text-4xl lg:text-6xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 bg-clip-text text-transparent mb-2 dark:from-green-500 dark:via-emerald-400 dark:to-green-400 tracking-tight">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-4xl lg:text-6xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 bg-clip-text text-transparent dark:from-green-500 dark:via-emerald-400 dark:to-green-400 tracking-tight">
                   Dashboard
                 </h1>
-                <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-green-500 animate-pulse" />
-                  <p className="text-zinc-500 text-sm lg:text-base dark:text-zinc-400 font-medium">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 animate-pulse flex-shrink-0" />
+                  <p className="text-zinc-500 text-[10px] sm:text-sm lg:text-base dark:text-zinc-400 font-medium">
                     Vue globale - Tous les pays
                   </p>
                 </div>
               </div>
             </div>
-            <Badge className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-400 border-green-500/30 px-5 py-2 text-sm font-semibold shadow-lg shadow-green-500/10 dark:bg-green-500/5 dark:text-green-500 dark:border-green-500/20 hover:scale-105 transition-transform duration-200">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-2"></div>
-              <Globe className="h-3.5 w-3.5 mr-2" />
-              Actif
-            </Badge>
+            <div className="flex shrink-0 justify-end">
+              <Badge className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-400 border-green-500/30 px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-semibold shadow-lg shadow-green-500/10 dark:bg-green-500/5 dark:text-green-500 dark:border-green-500/20 whitespace-nowrap">
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse mr-2 inline-block align-middle" />
+                <Globe className="h-3.5 w-3.5 mr-2 inline-block align-middle" />
+                Actif
+              </Badge>
+            </div>
           </div>
         </div>
 
-        {/* Vue Globale Section - Améliorée */}
-        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 shadow-lg shadow-green-500/10 dark:from-green-500/10 dark:to-emerald-500/10 dark:border-green-500/20">
-              <Globe className="h-5 w-5 text-green-400 dark:text-green-500" />
+        <div className="mb-6 sm:mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-8">
+            <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 shadow-lg shadow-green-500/10 dark:from-green-500/10 dark:to-emerald-500/10 dark:border-green-500/20 flex-shrink-0">
+              <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-green-400 dark:text-green-500" />
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Vue Globale</h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-500">Tous les pays - Statistiques en temps réel</p>
+            <div className="min-w-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-zinc-100">Vue Globale</h2>
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-500">Tous les pays - Statistiques en temps réel</p>
             </div>
           </div>
 
-          {/* 4 Cards métriques améliorées avec animations */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
             {/* Argent Entré Aujourd'hui */}
-            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-green-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-green-500/20 hover:-translate-y-1 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-green-500/30 dark:hover:shadow-green-500/10 min-w-0">
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-green-500/40 transition-colors transition-shadow duration-300 hover:shadow-xl hover:shadow-green-500/10 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-green-500/30 dark:hover:shadow-green-500/5 min-w-0">
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 dark:from-green-500/5" />
               <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
                 <CardTitle className="text-sm font-semibold text-zinc-700 group-hover:text-zinc-900 transition-colors dark:text-zinc-300 dark:group-hover:text-zinc-100">
                   Argent Entré Aujourd'hui
                 </CardTitle>
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-green-500/10 dark:from-green-500/15 dark:to-emerald-500/15">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20  shadow-lg shadow-green-500/10 dark:from-green-500/15 dark:to-emerald-500/15">
                   <DollarSign className="h-5 w-5 text-green-500 dark:text-green-400" />
                 </div>
               </CardHeader>
@@ -208,14 +206,14 @@ export default function DashboardPage() {
             </Card>
 
             {/* Bénéfice Réel Aujourd'hui */}
-            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-emerald-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-emerald-500/20 hover:-translate-y-1 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-emerald-500/30 dark:hover:shadow-emerald-500/10 min-w-0">
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-emerald-500/40 transition-colors transition-shadow duration-300 hover:shadow-xl hover:shadow-emerald-500/10 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-emerald-500/30 dark:hover:shadow-emerald-500/5 min-w-0">
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 dark:from-emerald-500/5" />
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
                 <CardTitle className="text-sm font-semibold text-zinc-700 group-hover:text-zinc-900 transition-colors dark:text-zinc-300 dark:group-hover:text-zinc-100">
                   Bénéfice Réel Aujourd'hui
                 </CardTitle>
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-emerald-500/10 dark:from-emerald-500/15 dark:to-teal-500/15">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20  shadow-lg shadow-emerald-500/10 dark:from-emerald-500/15 dark:to-teal-500/15">
                   <TrendingUp className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
                 </div>
               </CardHeader>
@@ -234,14 +232,14 @@ export default function DashboardPage() {
             </Card>
 
             {/* Cash chez Livreurs */}
-            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-orange-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/20 hover:-translate-y-1 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-orange-500/30 dark:hover:shadow-orange-500/10 min-w-0">
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-orange-500/40 transition-colors transition-shadow duration-300 hover:shadow-xl hover:shadow-orange-500/10 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-orange-500/30 dark:hover:shadow-orange-500/5 min-w-0">
               <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 dark:from-orange-500/5" />
               <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
                 <CardTitle className="text-sm font-semibold text-zinc-700 group-hover:text-zinc-900 transition-colors dark:text-zinc-300 dark:group-hover:text-zinc-100">
                   Cash chez Livreurs
                 </CardTitle>
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-orange-500/10 dark:from-orange-500/15 dark:to-amber-500/15">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-500/20 to-amber-500/20  shadow-lg shadow-orange-500/10 dark:from-orange-500/15 dark:to-amber-500/15">
                   <Truck className="h-5 w-5 text-orange-500 dark:text-orange-400" />
                 </div>
               </CardHeader>
@@ -254,14 +252,14 @@ export default function DashboardPage() {
             </Card>
 
             {/* Commandes Aujourd'hui */}
-            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-blue-500/40 transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-blue-500/30 dark:hover:shadow-blue-500/10 min-w-0">
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 hover:border-blue-500/40 transition-colors transition-shadow duration-300 hover:shadow-xl hover:shadow-blue-500/10 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 dark:hover:border-blue-500/30 dark:hover:shadow-blue-500/5 min-w-0">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 dark:from-blue-500/5" />
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
                 <CardTitle className="text-sm font-semibold text-zinc-700 group-hover:text-zinc-900 transition-colors dark:text-zinc-300 dark:group-hover:text-zinc-100">
                   Commandes Aujourd'hui
                 </CardTitle>
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg shadow-blue-500/10 dark:from-blue-500/15 dark:to-cyan-500/15">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20  shadow-lg shadow-blue-500/10 dark:from-blue-500/15 dark:to-cyan-500/15">
                   <ShoppingCart className="h-5 w-5 text-blue-500 dark:text-blue-400" />
                 </div>
               </CardHeader>
@@ -326,7 +324,7 @@ export default function DashboardPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className="relative">
-                              <div className="h-3 w-3 rounded-full bg-green-500 group-hover:scale-150 transition-transform duration-300 shadow-lg shadow-green-500/50 dark:bg-green-400"></div>
+                              <div className="h-3 w-3 rounded-full bg-green-500 shadow-lg shadow-green-500/50 dark:bg-green-400"></div>
                               <div className="absolute inset-0 h-3 w-3 rounded-full bg-green-500/30 animate-ping"></div>
                             </div>
                             <span className="text-sm font-semibold text-zinc-900 capitalize group-hover:text-green-600 transition-colors dark:text-zinc-100 dark:group-hover:text-green-400">
@@ -397,7 +395,7 @@ export default function DashboardPage() {
                       <div key={index} className="flex-1 flex flex-col items-center gap-3 group">
                         <div className="relative w-full h-full flex items-end">
                           <div
-                            className="w-full rounded-t-xl bg-gradient-to-t from-green-600 via-green-500 to-green-400 transition-all duration-500 hover:from-green-500 hover:via-green-400 hover:to-green-300 cursor-pointer shadow-xl shadow-green-500/30 group-hover:shadow-green-500/50 group-hover:scale-105 dark:from-green-700 dark:via-green-600 dark:to-green-500 dark:hover:from-green-600 dark:hover:via-green-500 dark:hover:to-green-400"
+                            className="w-full rounded-t-xl bg-gradient-to-t from-green-600 via-green-500 to-green-400 transition-colors duration-300 hover:from-green-500 hover:via-green-400 hover:to-green-300 cursor-pointer shadow-xl shadow-green-500/30 dark:from-green-700 dark:via-green-600 dark:to-green-500 dark:hover:from-green-600 dark:hover:via-green-500 dark:hover:to-green-400"
                             style={{ height: `${Math.max(height, 5)}%` }}
                             title={`${formatCurrency(day.amount)}`}
                           />
@@ -443,7 +441,7 @@ export default function DashboardPage() {
                     <div key={index} className="space-y-4 group">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${item.color} bg-opacity-20 shadow-lg dark:bg-opacity-10 group-hover:scale-110 transition-transform duration-300`}>
+                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${item.color} bg-opacity-20 shadow-lg dark:bg-opacity-10`}>
                             <Icon className={`h-5 w-5 ${iconColors[index]}`} />
                           </div>
                           <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{item.status}</span>

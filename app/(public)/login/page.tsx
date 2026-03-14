@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
@@ -18,6 +19,7 @@ import Image from "next/image";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const router = useRouter();
   const loginMutation = useLogin();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -37,7 +39,11 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginInput) => {
     try {
-      await loginMutation.mutateAsync(data);
+      const result = await loginMutation.mutateAsync(data);
+      if (result?.user && !result.user.emailVerifiedAt) {
+        const email = result.user.email ?? "";
+        router.push(email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email");
+      }
     } catch (error) {
       const apiError = extractApiError(error);
       setError("root", { message: apiError.message });

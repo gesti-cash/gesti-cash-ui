@@ -359,17 +359,14 @@ export default function SelectOrganizationPage() {
                               <Badge variant="outline" className="text-[10px] font-medium rounded-md border-primary/30 text-primary">Par défaut</Badge>
                             )}
                           </div>
-                          {org.code != null && org.code !== "" && (
+                          {org.code != null && org.code !== "" && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(org.code.trim()) && (
                             <p className="text-xs text-muted-foreground mt-0.5">Code <span className="font-mono font-medium">{org.code}</span></p>
                           )}
-                          {(org.city_id != null || org.country_id != null) && (
-                            <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                              <span className="truncate">{[org.city_id, org.country_id].filter(Boolean).join(" · ") || "—"}</span>
-                            </p>
-                          )}
                           {org.address != null && org.address !== "" && (
-                            <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{org.address}</p>
+                            <p className="mt-1 text-xs text-muted-foreground line-clamp-2 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                              <span className="line-clamp-2">{org.address}</span>
+                            </p>
                           )}
                         </div>
                       </div>

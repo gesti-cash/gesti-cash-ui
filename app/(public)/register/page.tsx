@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
@@ -45,8 +46,7 @@ const registerSchema = z.object({
     .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre"),
   confirmPassword: z.string(),
   tenantSlug: z.string()
-    .min(3, "Le nom de l'organisation doit contenir au moins 3 caractères")
-    .regex(/^[a-z0-9-]+$/, "Uniquement lettres minuscules, chiffres et tirets"),
+    .min(3, "Le nom de l'organisation doit contenir au moins 3 caractères"),
   affiliationCode: z.string().optional(),
   acceptTerms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les conditions d'utilisation",
@@ -78,6 +78,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({ strength: 0, label: "", color: "" });
+  const router = useRouter();
   const registerMutation = useRegister();
 
   const {
@@ -112,14 +113,17 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterFormInput) => {
     try {
-      // Adapter le payload à ce que ton API attend
-      await registerMutation.mutateAsync({
+      const result = await registerMutation.mutateAsync({
         name: data.name,
         email: data.email,
         password: data.password,
         tenantName: data.tenantSlug,
         affiliationCode: data.affiliationCode || undefined,
       } as any);
+      if (result?.user && !result.user.emailVerifiedAt) {
+        const email = result.user.email ?? data.email;
+        router.push(email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email");
+      }
     } catch (error) {
       const apiError = extractApiError(error);
       setError("root", { message: apiError.message });
@@ -252,7 +256,7 @@ export default function RegisterPage() {
                       {...register("tenantSlug")}
                       id="tenantSlug"
                       type="text"
-                      placeholder="mon-entreprise"
+                      placeholder="ex: Powers Cash Plc"
                       className="pl-10 h-11"
                     />
                   </div>
@@ -267,7 +271,7 @@ export default function RegisterPage() {
                     </motion.p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Sera utilisé dans votre URL : gesticash.com/<span className="font-semibold">mon-entreprise</span>
+                    Un identifiant pour l&apos;URL sera généré à partir de ce nom (ex. gesticash.com/mon-entreprise).
                   </p>
                 </div>
 

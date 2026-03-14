@@ -27,6 +27,7 @@ export default function TenantLayout({
     user: any;
     tenant: any;
   } | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Forcer la classe de thème sur <html> depuis le tenant (priorité sur next-themes)
   useEffect(() => {
@@ -129,9 +130,9 @@ export default function TenantLayout({
       }
       return (
         <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
-          <Sidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header />
+          <Sidebar open={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
+          <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+            <Header onMenuClick={() => setMobileSidebarOpen(true)} />
             <main className="flex-1 overflow-y-auto">{children}</main>
           </div>
         </div>
@@ -148,9 +149,9 @@ export default function TenantLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
+      <Sidebar open={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <Header onMenuClick={() => setMobileSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
