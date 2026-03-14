@@ -20,6 +20,7 @@ import {
   Truck,
   UserCircle,
   ClipboardList,
+  X,
 } from "lucide-react";
 import { useUser } from "@/shared/auth/store";
 import { useTenantStore } from "@/shared/tenant/store";
@@ -70,7 +71,12 @@ const navSections: NavSection[] = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const user = useUser();
   const tenantId = user?.tenantId;
@@ -78,6 +84,7 @@ export function Sidebar() {
   const { data: organizations = [], isLoading: orgsLoading } = useOrganizations(tenantId);
   const [orgDropdownOpen, setOrgDropdownOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const handleLinkClick = React.useCallback(() => onClose?.(), [onClose]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -96,30 +103,55 @@ export function Sidebar() {
       setSelectedOrganizationId(org.tenant_id, org.id);
       setOrganizationSelectedCookie();
       setOrgDropdownOpen(false);
+      onClose?.();
     },
-    [organizations, setTenant, setSelectedOrganizationId]
+    [organizations, setTenant, setSelectedOrganizationId, onClose]
   );
 
   const hasMultipleOrgs = organizations.length > 1;
 
   return (
-    <aside className="flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200/70 bg-white dark:border-zinc-800/70 dark:bg-zinc-950">
-      {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-zinc-200/70 px-4 dark:border-zinc-800/70">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-500/10 ring-1 ring-green-500/20">
-          <Image
-            src="/logo/logo.png"
-            alt="GestiCash"
-            width={24}
-            height={24}
-            className="h-5 w-5 object-contain"
-            priority
-          />
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={onClose}
+          aria-hidden
+        />
+      )}
+      <aside
+        className={cn(
+          "flex h-screen w-56 shrink-0 flex-col border-r border-zinc-200/70 bg-white dark:border-zinc-800/70 dark:bg-zinc-950",
+          "fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-out md:relative md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex h-14 items-center justify-between gap-2.5 border-b border-zinc-200/70 px-4 dark:border-zinc-800/70">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-500/10 ring-1 ring-green-500/20">
+              <Image
+                src="/logo/logo.png"
+                alt="GestiCash"
+                width={24}
+                height={24}
+                className="h-5 w-5 object-contain"
+                priority
+              />
+            </div>
+            <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-white truncate">
+              GestiCash
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden h-8 w-8 shrink-0 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            onClick={onClose}
+            aria-label="Fermer le menu"
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <span className="text-sm font-bold tracking-tight text-zinc-900 dark:text-white">
-          GestiCash
-        </span>
-      </div>
 
       {/* Organisation courante / Sélecteur */}
       {tenantId && (
@@ -130,7 +162,7 @@ export function Sidebar() {
               Chargement…
             </div>
           ) : organizations.length === 0 ? (
-            <Link href="/organizations/select">
+            <Link href="/organizations/select" onClick={handleLinkClick}>
               <Button variant="outline" size="sm" className="w-full justify-start gap-2 rounded-lg border-dashed text-xs">
                 <Building2 className="h-3.5 w-3.5" />
                 Choisir une organisation
@@ -185,7 +217,7 @@ export function Sidebar() {
                 <Building2 className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
                 <span className="min-w-0 truncate">{tenant?.name ?? organizations[0]?.name ?? "Organisation"}</span>
               </div>
-              <Link href="/organizations/select" className="block">
+              <Link href="/organizations/select" className="block" onClick={handleLinkClick}>
                 <span className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10">
                   Changer d&apos;organisation
                 </span>
@@ -193,7 +225,7 @@ export function Sidebar() {
             </div>
           )}
           {hasMultipleOrgs && (
-            <Link href="/organizations/select" className="mt-1 block">
+            <Link href="/organizations/select" className="mt-1 block" onClick={handleLinkClick}>
               <span className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800">
                 Gérer les organisations
               </span>
@@ -219,6 +251,7 @@ export function Sidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={handleLinkClick}
                       className={cn(
                         "relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -247,5 +280,6 @@ export function Sidebar() {
         ))}
       </nav>
     </aside>
+    </>
   );
 }

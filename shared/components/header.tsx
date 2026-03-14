@@ -11,14 +11,16 @@ import {
   ChevronDown,
   Globe,
   User,
+  Menu,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/shared/ui/avatar";
-import { Switch } from "@/shared/ui/switch";
 import { useTheme } from "next-themes";
 import { useUser } from "@/shared/auth/store";
 import { useLogout } from "@/shared/auth/hooks";
 import { useTenant } from "@/shared/tenant/store";
+import { useCountries } from "@/shared/reference/hooks";
 import { UserRole } from "@/shared/types";
 import { cn } from "@/shared/utils/cn";
 
@@ -60,7 +62,11 @@ const getInitials = (firstName?: string, lastName?: string, fallback?: string): 
     : `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const user = useUser();
@@ -68,7 +74,12 @@ export function Header() {
   const logoutMutation = useLogout();
   const [mounted, setMounted] = React.useState(false);
   const [userMenuOpen, setUserMenuOpen] = React.useState(false);
+  const [countriesMenuOpen, setCountriesMenuOpen] = React.useState(false);
+  const [selectedCountryId, setSelectedCountryId] = React.useState<string | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const countriesRef = React.useRef<HTMLDivElement>(null);
+  const { data: countries = [], isLoading: countriesLoading } = useCountries();
+  const selectedCountry = selectedCountryId ? countries.find((c) => c.id === selectedCountryId) : null;
 
   React.useEffect(() => {
     setMounted(true);
@@ -76,9 +87,9 @@ export function Header() {
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
-      }
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) setUserMenuOpen(false);
+      if (countriesRef.current && !countriesRef.current.contains(target)) setCountriesMenuOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -96,11 +107,20 @@ export function Header() {
   const roleTitle = user ? getRoleTitle(user.role) : "";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200/70 bg-white/90 px-6 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/90">
-      {/* Page title */}
-      <h1 className="text-base font-semibold text-zinc-800 dark:text-zinc-100">
-        {pageTitle}
-      </h1>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-zinc-200/70 bg-white/90 px-4 sm:px-6 backdrop-blur-md dark:border-zinc-800/70 dark:bg-zinc-950/90">
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={onMenuClick}
+          className="md:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          aria-label="Ouvrir le menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h1 className="text-base font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+          {pageTitle}
+        </h1>
+      </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
@@ -119,16 +139,51 @@ export function Header() {
           </Button>
         </Link>
 
-        {/* Pays */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <Globe className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-          <span>Tous les pays</span>
-          <ChevronDown className="h-3 w-3 text-zinc-400" />
-        </Button>
+        {/* Pays – liste des pays (API /reference/countries) */}
+        <div ref={countriesRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setCountriesMenuOpen((v) => !v)}
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          >
+            <Globe className="h-3.5 w-3.5 shrink-0 text-green-600 dark:text-green-400" />
+            <span className="max-w-[140px] truncate">
+              {selectedCountry ? selectedCountry.name : "Tous les pays"}
+            </span>
+            {countriesLoading ? (
+              <Loader2 className="h-3 w-3 shrink-0 animate-spin text-zinc-400" />
+            ) : (
+              <ChevronDown className={cn("h-3 w-3 shrink-0 text-zinc-400 transition-transform", countriesMenuOpen && "rotate-180")} />
+            )}
+          </button>
+          {countriesMenuOpen && (
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 max-h-[280px] min-w-[200px] overflow-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={() => { setSelectedCountryId(null); setCountriesMenuOpen(false); }}
+                className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors", !selectedCountryId ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800")}
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0" /> Tous les pays
+              </button>
+              {countries.length > 0 && (
+                <>
+                  <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
+                  {countries.map((country) => (
+                    <button
+                      key={country.id}
+                      type="button"
+                      onClick={() => { setSelectedCountryId(country.id); setCountriesMenuOpen(false); }}
+                      className={cn("flex w-full items-center gap-2 px-3 py-2 text-left text-xs transition-colors", selectedCountryId === country.id ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800")}
+                    >
+                      <span className="min-w-0 truncate">{country.name}{country.code ? ` (${country.code})` : ""}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {!countriesLoading && countries.length === 0 && <p className="px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">Aucun pays disponible</p>}
+            </div>
+          )}
+        </div>
 
         {/* Séparateur */}
         <div className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />

@@ -11,6 +11,7 @@ export {
   useForgotPassword,
   useResetPassword,
   useVerifyEmail,
+  useResendVerification,
   loginSchema,
   registerSchema,
   forgotPasswordSchema,

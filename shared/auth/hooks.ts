@@ -67,15 +67,14 @@ export const useLogin = () => {
       return response.data;
     },
     onSuccess: (data) => {
+      if (!data.user.emailVerifiedAt) return;
       const user = mapApiUserToUser(data.user);
-      // Adapter la réponse de l'API au format attendu par le store
       const tokens: AuthTokens = {
         accessToken: data.accessToken,
         refreshToken: "",
       };
       setAuthState(user, tokens);
       queryClient.setQueryData(queryKeys.auth.user, user);
-      // Après connexion, passer par la sélection d'organisation
       router.push("/organizations/select");
     },
     onError: (error) => {
@@ -96,6 +95,7 @@ export const useRegister = () => {
       return response.data;
     },
     onSuccess: (data) => {
+      if (!data.user.emailVerifiedAt) return;
       const user = mapApiUserToUser(data.user);
       const tokens: AuthTokens = {
         accessToken: data.accessToken,
@@ -103,7 +103,6 @@ export const useRegister = () => {
       };
       setAuthState(user, tokens);
       queryClient.setQueryData(queryKeys.auth.user, user);
-      // Après création de compte, passer par la sélection d'organisation
       router.push("/organizations/select");
     },
   });
@@ -237,7 +236,15 @@ export const useVerifyEmail = () => {
   return useMutation({
     mutationFn: async (data: { token: string }) => {
       await apiClient.post("/auth/verify-email", { token: data.token });
-      // 204 No Content
+    },
+  });
+};
+
+/** Renvoyer l'email de vérification – POST /api/v1/auth/resend-verification – body: { email } */
+export const useResendVerification = () => {
+  return useMutation({
+    mutationFn: async (data: { email: string }) => {
+      await apiClient.post("/auth/resend-verification", { email: data.email });
     },
   });
 };

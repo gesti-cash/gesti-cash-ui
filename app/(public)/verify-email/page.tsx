@@ -11,11 +11,13 @@ import {
   Mail,
   Loader2,
   Zap,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useVerifyEmail } from "@/shared/auth";
+import { useVerifyEmail, useResendVerification } from "@/shared/auth";
 import { extractApiError } from "@/shared/api/axios";
+import { Input } from "@/shared/ui/input";
 import { AUTH_ACCROCHE_IMAGE } from "@/shared/constants";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -91,7 +93,11 @@ function VerifyEmailContent() {
   const tokenFromUrl = searchParams.get("token") ?? "";
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState("");
+  const [resendEmailInput, setResendEmailInput] = useState("");
   const verifyMutation = useVerifyEmail();
+  const resendMutation = useResendVerification();
 
   useEffect(() => {
     if (!tokenFromUrl) return;
@@ -119,8 +125,27 @@ function VerifyEmailContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokenFromUrl]);
 
-  /* ── NO TOKEN ── */
+  /* ── NO TOKEN : Confirmez votre email (après login/register) + relance ── */
   if (!tokenFromUrl) {
+    const emailFromQuery = searchParams.get("email") ?? "";
+    const emailToResend = emailFromQuery || resendEmailInput.trim();
+    const handleResend = async () => {
+      setResendError("");
+      setResendSuccess(false);
+      if (!emailToResend) {
+        setResendError("Veuillez saisir votre adresse email.");
+        return;
+      }
+      try {
+        await resendMutation.mutateAsync({ email: emailToResend });
+        setResendSuccess(true);
+        setResendError("");
+      } catch (err) {
+        const apiError = extractApiError(err);
+        setResendError(apiError.message || "Impossible d'envoyer l'email. Réessayez plus tard.");
+        setResendSuccess(false);
+      }
+    };
     return (
       <div className="min-h-screen bg-[#060d16] flex items-center justify-center px-4 py-12 relative overflow-hidden">
         <AuthAccrocheBackground />
@@ -136,18 +161,47 @@ function VerifyEmailContent() {
             <div className="h-14 w-14 rounded-2xl bg-[#1E88E5]/10 border border-[#1E88E5]/20 flex items-center justify-center mx-auto mb-4">
               <Mail className="h-7 w-7 text-[#1E88E5]" />
             </div>
-            <h1 className="text-xl font-bold text-white mb-2">Vérification d&apos;email</h1>
-            <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-              Utilisez le lien reçu par email pour vérifier votre adresse. Si vous ne l&apos;avez pas
-              reçu, vérifiez vos spams ou reconnectez-vous pour renvoyer un lien.
+            <h1 className="text-xl font-bold text-white mb-2">Confirmez votre adresse email</h1>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-2">
+              Vous devez confirmer votre adresse email pour accéder à votre compte. Consultez votre boîte de réception et cliquez sur le lien envoyé. Le lien peut expirer : vous pouvez en demander un nouveau ci-dessous.
             </p>
-            <Link href="/login">
+            {emailFromQuery ? (
+              <p className="text-zinc-300 text-sm font-medium mb-4">Lien envoyé à : <span className="text-white">{emailFromQuery}</span></p>
+            ) : (
+              <p className="text-zinc-500 text-sm mb-4">Si vous ne voyez pas l&apos;email, vérifiez vos spams.</p>
+            )}
+            <div className="mb-6 space-y-3 text-left">
+              {!emailFromQuery && (
+                <div>
+                  <label htmlFor="resend-email" className="block text-xs font-medium text-zinc-400 mb-1.5">Votre adresse email</label>
+                  <Input
+                    id="resend-email"
+                    type="email"
+                    placeholder="vous@exemple.com"
+                    value={resendEmailInput}
+                    onChange={(e) => setResendEmailInput(e.target.value)}
+                    className="h-10 bg-zinc-800/80 border-zinc-700 text-white placeholder:text-zinc-500 rounded-xl"
+                  />
+                </div>
+              )}
               <Button
-                variant="outline"
-                className="w-full h-11 border-zinc-700/80 bg-transparent text-zinc-300 hover:bg-zinc-800/60 hover:text-white rounded-xl"
+                type="button"
+                onClick={handleResend}
+                disabled={resendMutation.isPending || (!emailFromQuery && !emailToResend)}
+                className="w-full h-11 bg-[#1E88E5] hover:bg-[#1976D2] text-white font-semibold rounded-xl"
               >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour à la connexion
+                {resendMutation.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Envoi en cours...</>
+                ) : (
+                  <><Send className="mr-2 h-4 w-4" /> Renvoyer l&apos;email de vérification</>
+                )}
+              </Button>
+              {resendSuccess && <p className="text-sm text-[#4CAF50] font-medium">Un nouvel email de vérification a été envoyé. Consultez votre boîte de réception (et les spams).</p>}
+              {resendError && <p className="text-sm text-red-400 font-medium flex items-center gap-1"><AlertCircle className="h-4 w-4 flex-shrink-0" />{resendError}</p>}
+            </div>
+            <Link href="/login">
+              <Button variant="outline" className="w-full h-11 border-zinc-700/80 bg-transparent text-zinc-300 hover:bg-zinc-800/60 hover:text-white rounded-xl">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Retour à la connexion
               </Button>
             </Link>
           </div>
