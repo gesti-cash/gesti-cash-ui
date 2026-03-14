@@ -124,8 +124,8 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        {/* Organisation */}
-        <Link href="/organizations/select">
+        {/* Organisation – masqué sur mobile */}
+        <Link href="/organizations/select" className="hidden md:block">
           <Button
             variant="ghost"
             size="sm"
@@ -139,8 +139,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           </Button>
         </Link>
 
-        {/* Pays – liste des pays (API /reference/countries) */}
-        <div ref={countriesRef} className="relative">
+        {/* Pays – liste des pays (API /reference/countries) – masqué sur mobile */}
+        <div ref={countriesRef} className="relative hidden md:block">
           <button
             type="button"
             onClick={() => setCountriesMenuOpen((v) => !v)}
@@ -185,8 +185,8 @@ export function Header({ onMenuClick }: HeaderProps) {
           )}
         </div>
 
-        {/* Séparateur */}
-        <div className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
+        {/* Séparateur – masqué sur mobile */}
+        <div className="mx-1 hidden h-5 w-px bg-zinc-200 dark:bg-zinc-700 md:block" />
 
         {/* Dark mode toggle */}
         {mounted && (
@@ -206,14 +206,15 @@ export function Header({ onMenuClick }: HeaderProps) {
         {/* Séparateur */}
         <div className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
 
-        {/* User menu */}
+        {/* User menu – avatar seul sur mobile, nom + chevron à partir de md */}
         {user && (
           <div ref={menuRef} className="relative">
             <button
               onClick={() => setUserMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+              className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 md:px-2.5 md:py-1 text-sm transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+              aria-label="Menu profil"
             >
-              <Avatar className="h-6 w-6">
+              <Avatar className="h-7 w-7 md:h-6 md:w-6">
                 {user.avatar ? (
                   <AvatarImage src={user.avatar} alt={fullName} />
                 ) : null}
@@ -221,12 +222,12 @@ export function Header({ onMenuClick }: HeaderProps) {
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="max-w-[100px] truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              <span className="hidden max-w-[100px] truncate text-xs font-medium text-zinc-700 dark:text-zinc-300 md:inline">
                 {fullName || "Compte"}
               </span>
               <ChevronDown
                 className={cn(
-                  "h-3 w-3 text-zinc-400 transition-transform",
+                  "hidden h-3 w-3 text-zinc-400 transition-transform md:block",
                   userMenuOpen && "rotate-180"
                 )}
               />
