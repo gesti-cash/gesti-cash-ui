@@ -102,6 +102,7 @@ function ResetPasswordContent() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
     setError,
     setValue,
@@ -109,6 +110,14 @@ function ResetPasswordContent() {
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { token: tokenFromUrl, password: "", confirmPassword: "" },
   });
+
+  const passwordValue = watch("password");
+  const passwordChecks = {
+    length: (passwordValue?.length ?? 0) >= 8,
+    uppercase: /[A-Z]/.test(passwordValue ?? ""),
+    lowercase: /[a-z]/.test(passwordValue ?? ""),
+    digit: /\d/.test(passwordValue ?? ""),
+  };
 
   // Inject token
   if (tokenFromUrl) {
@@ -285,18 +294,24 @@ function ResetPasswordContent() {
                     )}
                   </div>
 
-                  {/* Password hints */}
+                  {/* Password hints – reflètent la notice et la validation en temps réel */}
                   <div className="bg-zinc-800/40 border border-zinc-700/40 rounded-xl p-3 space-y-1.5">
                     <p className="text-xs text-zinc-500 font-medium mb-2">Le mot de passe doit contenir :</p>
                     {[
-                      "Au moins 8 caractères",
-                      "Une lettre majuscule",
-                      "Une lettre minuscule",
-                      "Un chiffre",
-                    ].map((hint, i) => (
+                      { label: "Au moins 8 caractères", ok: passwordChecks.length },
+                      { label: "Une lettre majuscule", ok: passwordChecks.uppercase },
+                      { label: "Une lettre minuscule", ok: passwordChecks.lowercase },
+                      { label: "Un chiffre", ok: passwordChecks.digit },
+                    ].map(({ label, ok }, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="h-1.5 w-1.5 rounded-full bg-zinc-600" />
-                        <span className="text-xs text-zinc-500">{hint}</span>
+                        {ok ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-[#4CAF50] flex-shrink-0" />
+                        ) : (
+                          <div className="h-1.5 w-1.5 rounded-full bg-zinc-600 flex-shrink-0" />
+                        )}
+                        <span className={`text-xs ${ok ? "text-zinc-400" : "text-zinc-500"}`}>
+                          {label}
+                        </span>
                       </div>
                     ))}
                   </div>

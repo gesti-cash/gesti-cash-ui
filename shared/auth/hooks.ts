@@ -35,6 +35,7 @@ interface LoginResponse {
     firstName?: string;
     lastName?: string;
     role?: UserRole;
+    referralCode?: string;
   };
   accessToken: string;
   expiresIn: string;
@@ -53,6 +54,7 @@ const mapApiUserToUser = (apiUser: LoginResponse["user"]): User => {
     lastName: lastName || "",
     tenantId: apiUser.tenantId,
     role: apiUser.role ?? UserRole.USER,
+    referralCode: apiUser.referralCode,
   };
 };
 
@@ -205,11 +207,22 @@ export const useForgotPassword = () => {
   });
 };
 
+/** Critères mot de passe (notice « Nouveau mot de passe ») : 8+ caractères, majuscule, minuscule, chiffre */
+const PASSWORD_MIN_LENGTH = 8;
+const hasUppercase = (s: string) => /[A-Z]/.test(s);
+const hasLowercase = (s: string) => /[a-z]/.test(s);
+const hasDigit = (s: string) => /\d/.test(s);
+
 /** Réinitialiser le mot de passe – POST /api/v1/auth/reset-password – body: { token, password }, 204 ou 400 (token invalide/expiré) */
 export const resetPasswordSchema = z
   .object({
     token: z.string().min(1, "Token requis"),
-    password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+    password: z
+      .string()
+      .min(PASSWORD_MIN_LENGTH, "Le mot de passe doit contenir au moins 8 caractères")
+      .refine(hasUppercase, "Le mot de passe doit contenir une lettre majuscule")
+      .refine(hasLowercase, "Le mot de passe doit contenir une lettre minuscule")
+      .refine(hasDigit, "Le mot de passe doit contenir un chiffre"),
     confirmPassword: z.string().min(1, "Confirmez le mot de passe"),
   })
   .refine((data) => data.password === data.confirmPassword, {

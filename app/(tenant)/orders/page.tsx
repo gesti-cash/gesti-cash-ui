@@ -10,6 +10,14 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { useTenantId, useSelectedOrganizationId } from "@/shared/tenant/store";
 import {
   useOrders,
@@ -36,7 +44,9 @@ import {
   Hash,
   User,
   Package,
+  MoreVertical,
 } from "lucide-react";
+import { formatPriceFCFA } from "@/shared/utils";
 
 // Mapping des statuts vers le français
 const STATUS_TRANSLATIONS: Record<string, string> = {
@@ -82,9 +92,7 @@ const STATUS_FILTERS = [
   { value: "cancelled", label: "Annulé" },
 ];
 
-const formatPrice = (price: number | string): string => {
-  return `${Number(price).toLocaleString("fr-FR")} FCFA`;
-};
+const formatPrice = (price: number | string): string => formatPriceFCFA(price);
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "—";
@@ -209,6 +217,7 @@ export default function OrdersPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateOrderFormValues>({
     resolver: zodResolver(createOrderSchema),
@@ -220,6 +229,23 @@ export default function OrdersPage() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
+
+  const customerOptions = React.useMemo(
+    () =>
+      customers.map((c) => ({
+        value: c.id,
+        label: `${c.name}${c.phone ? ` – ${c.phone}` : ""}`,
+      })),
+    [customers]
+  );
+  const productOptions = React.useMemo(
+    () =>
+      products.map((p) => ({
+        value: p.id,
+        label: `${p.name} – ${formatPriceFCFA(p.price)}`,
+      })),
+    [products]
+  );
 
   const onSubmitCreateOrder = handleSubmit((values) => {
     createOrderMutation.mutate(
@@ -372,8 +398,8 @@ export default function OrdersPage() {
           </Button>
         </div>
 
-        {/* Search and Filters */}
-        <div className="space-y-4">
+        {/* FILTRES DÉSACTIVÉS - Search and Filters */}
+        {/* <div className="space-y-4">
           <div className="relative group">
             <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300" />
             <div className="relative">
@@ -412,7 +438,7 @@ export default function OrdersPage() {
               </Button>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Orders Table */}
         <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-xl overflow-hidden">
@@ -528,72 +554,75 @@ export default function OrdersPage() {
                             </Badge>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                title="Voir"
-                                onClick={() => setSelectedOrder(order)}
-                              >
-                                <Eye className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                              </Button>
-                              {canConfirm && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-green-600 hover:text-green-700 dark:text-green-400"
-                                  title="Confirmer"
-                                  onClick={() => handleConfirm(order.id)}
-                                  disabled={confirmOrderMutation.isPending}
+                                  className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                                 >
-                                  {confirmOrderMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  )}
+                                  <MoreVertical className="h-4 w-4" />
                                 </Button>
-                              )}
-                              {canCancel && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-orange-600 hover:text-orange-700 dark:text-orange-400"
-                                  title="Annuler"
-                                  onClick={() => handleCancel(order.id)}
-                                  disabled={cancelOrderMutation.isPending}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[160px]">
+                                <DropdownMenuItem
+                                  onClick={() => setSelectedOrder(order)}
+                                  className="cursor-pointer"
                                 >
-                                  {cancelOrderMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <XCircle className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                title="Modifier"
-                                onClick={() => {}}
-                              >
-                                <Edit className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-red-600 hover:text-red-700 dark:text-red-400"
-                                title="Supprimer (soft)"
-                                onClick={() => handleDelete(order.id)}
-                                disabled={deleteOrderMutation.isPending}
-                              >
-                                {deleteOrderMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Voir
+                                </DropdownMenuItem>
+                                {canConfirm && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleConfirm(order.id)}
+                                    disabled={confirmOrderMutation.isPending}
+                                    className="text-green-600 focus:text-green-700 dark:text-green-400 cursor-pointer"
+                                  >
+                                    {confirmOrderMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    )}
+                                    Confirmer
+                                  </DropdownMenuItem>
                                 )}
-                              </Button>
-                            </div>
+                                {canCancel && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleCancel(order.id)}
+                                    disabled={cancelOrderMutation.isPending}
+                                    className="text-orange-600 focus:text-orange-700 dark:text-orange-400 cursor-pointer"
+                                  >
+                                    {cancelOrderMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                    )}
+                                    Annuler
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                  onClick={() => {}}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Modifier
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDelete(order.id)}
+                                  disabled={deleteOrderMutation.isPending}
+                                  variant="destructive"
+                                  className="cursor-pointer"
+                                >
+                                  {deleteOrderMutation.isPending ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                  )}
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       );
@@ -681,18 +710,15 @@ export default function OrdersPage() {
                           <User className="h-3.5 w-3.5 text-zinc-400" />
                           Client <span className="text-red-500">*</span>
                         </Label>
-                        <select
+                        <SearchableSelect
                           id="create-order-customer"
-                          {...register("customer_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/30"
-                        >
-                          <option value="">Sélectionner un client</option>
-                          {customers.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} {c.phone ? `– ${c.phone}` : ""}
-                            </option>
-                          ))}
-                        </select>
+                          options={customerOptions}
+                          value={watch("customer_id") ?? ""}
+                          onChange={(v) => setValue("customer_id", v)}
+                          placeholder="Sélectionner un client"
+                          searchPlaceholder="Rechercher un client…"
+                          emptyMessage="Aucun client trouvé"
+                        />
                         {errors.customer_id && (
                           <p className="text-xs text-red-500">{errors.customer_id.message}</p>
                         )}
@@ -727,22 +753,19 @@ export default function OrdersPage() {
                           >
                             <div className="flex-1 min-w-[140px] space-y-1">
                               <span className="text-xs font-medium text-zinc-500">Produit</span>
-                              <select
-                                {...register(`lines.${index}.product_id`, {
-                                  onChange: (e) => {
-                                    const product = products.find((p) => p.id === e.target.value);
-                                    if (product) setValue(`lines.${index}.unit_price`, product.price);
-                                  },
-                                })}
-                                className="flex h-9 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 text-sm"
-                              >
-                                <option value="">Choisir</option>
-                                {products.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name} – {p.price.toLocaleString("fr-FR")} FCFA
-                                  </option>
-                                ))}
-                              </select>
+                              <SearchableSelect
+                                options={productOptions}
+                                value={watch(`lines.${index}.product_id`) ?? ""}
+                                onChange={(v) => {
+                                  setValue(`lines.${index}.product_id`, v);
+                                  const product = products.find((p) => p.id === v);
+                                  if (product) setValue(`lines.${index}.unit_price`, product.price);
+                                }}
+                                placeholder="Choisir un produit"
+                                searchPlaceholder="Rechercher un produit…"
+                                emptyMessage="Aucun produit trouvé"
+                                className="[&_button]:h-9"
+                              />
                               {errors.lines?.[index]?.product_id && (
                                 <p className="text-xs text-red-500">{errors.lines[index]?.product_id?.message}</p>
                               )}
@@ -766,11 +789,9 @@ export default function OrdersPage() {
                                 min={0}
                                 step={1}
                                 {...register(`lines.${index}.unit_price`, { valueAsNumber: true })}
-                                className="h-9"
+                                className="h-9 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-80"
+                                readOnly
                               />
-                              {errors.lines?.[index]?.unit_price && (
-                                <p className="text-xs text-red-500">{errors.lines[index]?.unit_price?.message}</p>
-                              )}
                             </div>
                             <Button
                               type="button"
@@ -785,6 +806,22 @@ export default function OrdersPage() {
                           </div>
                         ))}
                       </div>
+                      {fields.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+                          <div className="text-sm">
+                            <span className="text-zinc-500 dark:text-zinc-400 mr-2">Total :</span>
+                            <span className="font-semibold text-base bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent">
+                              {formatPrice(
+                                (watch("lines") || []).reduce(
+                                  (sum: number, line: { quantity?: number; unit_price?: number }) =>
+                                    sum + (Number(line?.quantity) || 0) * (Number(line?.unit_price) || 0),
+                                  0
+                                )
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-3 pt-2">

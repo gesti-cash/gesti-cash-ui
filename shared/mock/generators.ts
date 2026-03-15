@@ -367,6 +367,175 @@ export function generateDashboardStats(tenantId: string): MockDashboardStats {
 }
 
 // ============================================
+// Stock Movements (Mouvements)
+// ============================================
+
+export const MOVEMENT_TYPES = ["IN", "OUT", "ADJUSTMENT", "TRANSFER"] as const;
+export type MockMovementType = (typeof MOVEMENT_TYPES)[number];
+
+export interface MockStockMovement {
+  id: string;
+  tenantId: string;
+  organizationId?: string;
+  productId: string;
+  productName: string;
+  productSku?: string;
+  type: MockMovementType;
+  quantity: number;
+  quantityBefore?: number;
+  quantityAfter?: number;
+  reference?: string;
+  reason?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export function generateStockMovement(
+  tenantId: string,
+  overrides?: Partial<MockStockMovement>
+): MockStockMovement {
+  const type = randomChoice(MOVEMENT_TYPES);
+  const qty = randomInt(1, 50);
+  const qtyBefore = randomInt(10, 200);
+  const isIn = type === "IN" || type === "ADJUSTMENT";
+  const quantity = isIn ? qty : -qty;
+  return {
+    id: generateId(),
+    tenantId,
+    productId: generateId(),
+    productName: randomChoice(PRODUCT_NAMES),
+    productSku: `SKU-${randomInt(1000, 9999)}`,
+    type,
+    quantity,
+    quantityBefore: qtyBefore,
+    quantityAfter: qtyBefore + quantity,
+    reference: `MOV-${randomInt(10000, 99999)}`,
+    reason: type === "ADJUSTMENT" ? "Ajustement inventaire" : undefined,
+    createdAt: randomPastDate(60).toISOString(),
+    createdBy: `${randomChoice(FIRST_NAMES)} ${randomChoice(LAST_NAMES)}`,
+    ...overrides,
+  };
+}
+
+// ============================================
+// Cash (Caisse) - Sessions & Transactions
+// ============================================
+
+export interface MockCashSession {
+  id: string;
+  tenantId: string;
+  organizationId?: string;
+  openedAt: string;
+  closedAt?: string;
+  openingBalance: number;
+  closingBalance?: number;
+  totalIn: number;
+  totalOut: number;
+  status: "open" | "closed";
+  openedBy?: string;
+  closedBy?: string;
+}
+
+export interface MockCashTransaction {
+  id: string;
+  sessionId: string;
+  tenantId: string;
+  type: "in" | "out";
+  amount: number;
+  label: string;
+  reference?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export function generateCashSession(
+  tenantId: string,
+  overrides?: Partial<MockCashSession>
+): MockCashSession {
+  const openingBalance = randomFloat(50000, 500000);
+  const totalIn = randomFloat(100000, 2000000);
+  const totalOut = randomFloat(50000, totalIn * 0.8);
+  const isClosed = Math.random() > 0.3;
+  return {
+    id: generateId(),
+    tenantId,
+    openedAt: randomPastDate(30).toISOString(),
+    closedAt: isClosed ? randomPastDate(20).toISOString() : undefined,
+    openingBalance,
+    closingBalance: isClosed ? openingBalance + totalIn - totalOut : undefined,
+    totalIn,
+    totalOut,
+    status: isClosed ? "closed" : "open",
+    openedBy: randomChoice(FIRST_NAMES) + " " + randomChoice(LAST_NAMES),
+    closedBy: isClosed ? randomChoice(FIRST_NAMES) + " " + randomChoice(LAST_NAMES) : undefined,
+    ...overrides,
+  };
+}
+
+export function generateCashTransaction(
+  sessionId: string,
+  tenantId: string,
+  overrides?: Partial<MockCashTransaction>
+): MockCashTransaction {
+  const isIn = Math.random() > 0.4;
+  return {
+    id: generateId(),
+    sessionId,
+    tenantId,
+    type: isIn ? "in" : "out",
+    amount: randomFloat(5000, 200000),
+    label: isIn ? randomChoice(TRANSACTION_DESCRIPTIONS) : "Dépense caisse",
+    reference: `CASH-${randomInt(1000, 9999)}`,
+    createdAt: randomPastDate(7).toISOString(),
+    createdBy: randomChoice(FIRST_NAMES) + " " + randomChoice(LAST_NAMES),
+    ...overrides,
+  };
+}
+
+// ============================================
+// ROAS (Return on Ad Spend)
+// ============================================
+
+export interface MockRoasCampaign {
+  id: string;
+  tenantId: string;
+  name: string;
+  channel: string;
+  spend: number;
+  revenueCashReal: number;
+  roas: number;
+  startDate: string;
+  endDate?: string;
+  status: "active" | "paused" | "ended";
+  createdAt: string;
+}
+
+const ROAS_CHANNELS = ["Facebook", "Instagram", "Google Ads", "TikTok", "WhatsApp", "Affiliation"];
+
+export function generateRoasCampaign(
+  tenantId: string,
+  overrides?: Partial<MockRoasCampaign>
+): MockRoasCampaign {
+  const spend = randomFloat(50000, 500000);
+  const revenueCashReal = randomFloat(spend * 0.5, spend * 4);
+  const roas = revenueCashReal / spend;
+  return {
+    id: generateId(),
+    tenantId,
+    name: `Campagne ${randomChoice(ROAS_CHANNELS)} ${randomInt(1, 12)}/${new Date().getFullYear()}`,
+    channel: randomChoice(ROAS_CHANNELS),
+    spend,
+    revenueCashReal,
+    roas,
+    startDate: randomPastDate(90).toISOString().split("T")[0],
+    endDate: Math.random() > 0.5 ? randomPastDate(30).toISOString().split("T")[0] : undefined,
+    status: randomChoice(["active", "paused", "ended"] as const),
+    createdAt: randomPastDate(60).toISOString(),
+    ...overrides,
+  };
+}
+
+// ============================================
 // Générateur de réponses paginées
 // ============================================
 

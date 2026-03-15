@@ -8,6 +8,8 @@ export interface User {
   avatar?: string;
   role: UserRole;
   tenantId: string;
+  /** Code de parrainage que l'utilisateur peut partager */
+  referralCode?: string;
 }
 
 export enum UserRole {

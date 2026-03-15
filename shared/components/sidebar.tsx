@@ -28,10 +28,13 @@ import { useOrganizations } from "@/shared/organizations/hooks";
 import { buildTenantFromOrganization, setOrganizationSelectedCookie } from "@/shared/organizations/utils";
 import { Button } from "@/shared/ui/button";
 
+type NavAccent = "default" | "violet" | "sky" | "emerald" | "indigo" | "amber";
+
 interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
+  accent?: NavAccent;
 }
 
 interface NavSection {
@@ -39,34 +42,53 @@ interface NavSection {
   items: NavItem[];
 }
 
+const accentClasses: Record<NavAccent, { link: string; bar: string; icon: string }> = {
+  default: { link: "bg-zinc-100 text-zinc-800 dark:bg-zinc-500/10 dark:text-zinc-200", bar: "bg-zinc-500", icon: "text-zinc-600 dark:text-zinc-400" },
+  violet: { link: "bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400", bar: "bg-violet-500", icon: "text-violet-600 dark:text-violet-400" },
+  sky: { link: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400", bar: "bg-sky-500", icon: "text-sky-600 dark:text-sky-400" },
+  emerald: { link: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", bar: "bg-emerald-500", icon: "text-emerald-600 dark:text-emerald-400" },
+  indigo: { link: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400", bar: "bg-indigo-500", icon: "text-indigo-600 dark:text-indigo-400" },
+  amber: { link: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", bar: "bg-amber-500", icon: "text-amber-600 dark:text-amber-400" },
+};
+
 const navSections: NavSection[] = [
   {
     title: "Principal",
     items: [
-      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { title: "Produits", href: "/products", icon: Package },
-      { title: "Catégories", href: "/categories", icon: FolderOpen },
-      { title: "Commandes", href: "/orders", icon: ShoppingCart },
-      { title: "Clients", href: "/customers", icon: Users },
-      { title: "Fournisseurs", href: "/suppliers", icon: Truck },
-      { title: "Livreurs", href: "/delivery", icon: UserCircle },
-      { title: "Bons de commande", href: "/purchase-orders", icon: ClipboardList },
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, accent: "default" },
+      { title: "Catégories", href: "/categories", icon: FolderOpen, accent: "violet" },
+      { title: "Produits", href: "/products", icon: Package, accent: "default" },
+    ],
+  },
+  {
+    title: "Achat",
+    items: [
+      { title: "Fournisseur", href: "/suppliers", icon: Truck, accent: "default" },
+      { title: "Bon de commande", href: "/purchase-orders", icon: ClipboardList, accent: "default" },
+    ],
+  },
+  {
+    title: "Vente",
+    items: [
+      { title: "Client", href: "/customers", icon: Users, accent: "default" },
+      { title: "Commande", href: "/orders", icon: ShoppingCart, accent: "default" },
+      { title: "Livreur", href: "/delivery", icon: UserCircle, accent: "default" },
     ],
   },
   {
     title: "Stock",
     items: [
-      { title: "Vue Stock", href: "/stock", icon: Warehouse },
-      { title: "Inventaire", href: "/inventory", icon: FolderOpen },
-      { title: "Mouvements", href: "/movements", icon: TrendingUp },
+      { title: "Vue Stock", href: "/stock", icon: Warehouse, accent: "default" },
+      { title: "Inventaire", href: "/inventory", icon: FolderOpen, accent: "default" },
+      { title: "Mouvements", href: "/movements", icon: TrendingUp, accent: "sky" },
     ],
   },
   {
     title: "Finances",
     items: [
-      { title: "Caisse", href: "/cash", icon: DollarSign },
-      { title: "Finances", href: "/finances", icon: DollarSign },
-      { title: "ROAS Cash Réel", href: "/roas", icon: TrendingUp },
+      { title: "Caisse", href: "/cash", icon: DollarSign, accent: "emerald" },
+      { title: "Finances", href: "/finances", icon: DollarSign, accent: "indigo" },
+      { title: "ROAS Cash Réel", href: "/roas", icon: TrendingUp, accent: "amber" },
     ],
   },
 ];
@@ -247,6 +269,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 const isActive =
                   pathname === item.href ||
                   pathname?.startsWith(item.href + "/");
+                const accent = item.accent ?? "default";
+                const styles = accentClasses[accent];
                 return (
                   <li key={item.href}>
                     <Link
@@ -254,20 +278,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                       onClick={handleLinkClick}
                       className={cn(
                         "relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
-                          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                        isActive ? styles.link : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
                       )}
                     >
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-green-500" />
+                        <span className={cn("absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full", styles.bar)} />
                       )}
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0",
-                          isActive
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-zinc-500 dark:text-zinc-500"
+                          isActive ? styles.icon : "text-zinc-500 dark:text-zinc-500"
                         )}
                       />
                       {item.title}

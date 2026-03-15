@@ -10,6 +10,14 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { useTenantId, useSelectedOrganizationId, useSetSelectedOrganizationId } from "@/shared/tenant/store";
 import { useOrganizations } from "@/shared/organizations/hooks";
 import { useCreateProduct, useProducts, useUpdateProduct, useDeleteProduct, type Product } from "@/shared/products/hooks";
@@ -37,7 +45,9 @@ import {
   Building2,
   Pencil,
   Trash2,
+  MoreVertical,
 } from "lucide-react";
+import { formatPriceFCFA, formatAmount } from "@/shared/utils";
 
 const createProductSchema = z.object({
   name: z.string().min(2, "Le nom doit comporter au moins 2 caractères"),
@@ -88,10 +98,7 @@ const getCategoryName = (
 ): string =>
   categories.find((c) => c.id === categoryId)?.name ?? categoryId;
 
-// Formater le prix
-const formatPrice = (price: number): string => {
-  return `${price.toLocaleString("fr-FR")} FCFA`;
-};
+const formatPrice = (price: number): string => formatPriceFCFA(price);
 
 const ITEMS_PER_PAGE = 10;
 
@@ -110,6 +117,7 @@ export default function ProductsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const tenantId = useTenantId();
   const persistedOrgId = useSelectedOrganizationId(tenantId ?? undefined);
@@ -154,10 +162,25 @@ export default function ProductsPage() {
     [apiCategories]
   );
 
+  const categoryOptions = useMemo(
+    () => activeCategories.map((cat) => ({ value: cat.id, label: cat.name })),
+    [activeCategories]
+  );
+  const organizationOptions = useMemo(
+    () =>
+      organizations.map((org) => ({
+        value: org.id,
+        label: `${org.name}${org.is_default ? " (par défaut)" : ""}`,
+      })),
+    [organizations]
+  );
+
   const {
     register: registerEdit,
     handleSubmit: handleSubmitEdit,
     reset: resetEdit,
+    setValue: setValueEdit,
+    watch: watchEdit,
     formState: { errors: errorsEdit },
   } = useForm<UpdateProductFormValues>({
     resolver: zodResolver(updateProductSchema),
@@ -227,9 +250,13 @@ export default function ProductsPage() {
 
   const handleDeleteProduct = (product: Product) => {
     if (!window.confirm(`Supprimer le produit « ${product.name} » ? (suppression douce)`)) return;
+    setDeletingId(product.id);
     deleteProduct.mutate(product.id, {
       onSuccess: () => {
         setSelectedProduct(null);
+      },
+      onSettled: () => {
+        setDeletingId(null);
       },
     });
   };
@@ -340,7 +367,10 @@ export default function ProductsPage() {
   // Statistiques (à partir des produits API)
   const stats = useMemo(() => {
     const total = apiProducts.length;
-    const totalValue = apiProducts.reduce((sum, p) => sum + p.price, 0);
+    const totalValue = apiProducts.reduce(
+      (sum, p) => sum + (Number(p.price) || 0),
+      0
+    );
     return {
       total,
       totalValue,
@@ -452,7 +482,7 @@ export default function ProductsPage() {
                   </div>
                 </div>
                 <div className="text-2xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent dark:from-green-400 dark:to-emerald-400 mb-1">
-                  {stats.total}
+                  {formatAmount(stats.total)}
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-500 font-medium">
                   Produits totaux
@@ -542,203 +572,10 @@ export default function ProductsPage() {
             </div>
           )}
 
-          {/* Search and Filters Section */}
-          <div className="mb-6 space-y-4">
-            {/* Search Bar - Amélioré */}
-            <div className="relative group">
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-300"></div>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-600 group-focus-within:text-green-500 dark:group-focus-within:text-green-400 transition-colors" />
-                <Input
-                  type="text"
-                  placeholder="Rechercher un produit par nom, SKU ou catégorie..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 pr-12 h-14 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-zinc-200/80 dark:border-zinc-800/80 focus:border-green-500 dark:focus:border-green-500 focus:ring-2 focus:ring-green-500/20 dark:focus:ring-green-500/10 text-base shadow-lg shadow-zinc-200/50 dark:shadow-zinc-900/50 transition-all duration-300"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    <X className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Filtres avec badges/chips */}
-            <div className="space-y-4">
-              {/* Catégories */}
-              <div className="flex items-center gap-2 flex-wrap gap-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                  <Filter className="h-4 w-4 text-zinc-500 dark:text-zinc-500" />
-                  <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                    Catégories:
-                  </span>
-                </div>
-                {FILTER_CATEGORIES.map((category) => (
-                  <Badge
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`cursor-pointer px-4 py-1.5 text-sm font-medium transition-all duration-200 hover:scale-105 ${
-                      selectedCategory === category
-                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 shadow-lg shadow-green-500/20 dark:shadow-green-500/10"
-                        : "bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-green-500/50 dark:hover:border-green-500/30"
-                    }`}
-                  >
-                    {category}
-                  </Badge>
-                ))}
-              </div>
-
-              {/* Filtres rapides - Stock, Marge, Statut */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                  <Activity className="h-4 w-4 text-zinc-500 dark:text-zinc-500" />
-                  <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                    Filtres:
-                  </span>
-                </div>
-                
-                {/* Filtre Stock */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { value: "all", label: "Tous", icon: Package },
-                    { value: "low", label: "Stock faible", icon: AlertTriangle },
-                    { value: "inStock", label: "En stock", icon: Package },
-                    { value: "outOfStock", label: "Rupture", icon: X },
-                  ].map(({ value, label, icon: Icon }) => (
-                    <Badge
-                      key={value}
-                      onClick={() => setFilters({ ...filters, stockFilter: value })}
-                      className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1 ${
-                        filters.stockFilter === value
-                          ? "bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-0 shadow-lg shadow-yellow-500/20"
-                          : "bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-yellow-500/50"
-                      }`}
-                    >
-                      <Icon className="h-3 w-3" />
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-
-                {/* Filtre Marge */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { value: "all", label: "Toutes", icon: TrendingUp },
-                    { value: "high", label: "≥50%", icon: TrendingUp },
-                    { value: "medium", label: "20-50%", icon: Activity },
-                    { value: "low", label: "<20%", icon: TrendingUp },
-                  ].map(({ value, label, icon: Icon }) => (
-                    <Badge
-                      key={value}
-                      onClick={() => setFilters({ ...filters, marginFilter: value })}
-                      className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1 ${
-                        filters.marginFilter === value
-                          ? "bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 shadow-lg shadow-blue-500/20"
-                          : "bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50"
-                      }`}
-                    >
-                      <Icon className="h-3 w-3" />
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-
-                {/* Filtre Statut */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { value: "all", label: "Tous", icon: Info },
-                    { value: "active", label: "Actif", icon: Activity },
-                    { value: "inactive", label: "Inactif", icon: X },
-                  ].map(({ value, label, icon: Icon }) => (
-                    <Badge
-                      key={value}
-                      onClick={() => setFilters({ ...filters, statusFilter: value })}
-                      className={`cursor-pointer px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:scale-105 flex items-center gap-1 ${
-                        filters.statusFilter === value
-                          ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 shadow-lg shadow-green-500/20"
-                          : "bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-green-500/50"
-                      }`}
-                    >
-                      <Icon className="h-3 w-3" />
-                      {label}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Filtre Prix avec range */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
-                  <DollarSign className="h-4 w-4 text-zinc-500 dark:text-zinc-500" />
-                  <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                    Prix:
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Min (FCFA)"
-                    value={filters.priceRange.min}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        priceRange: { ...filters.priceRange, min: e.target.value },
-                      })
-                    }
-                    className="w-32 h-9 text-sm"
-                  />
-                  <span className="text-zinc-400">-</span>
-                  <Input
-                    type="number"
-                    placeholder="Max (FCFA)"
-                    value={filters.priceRange.max}
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        priceRange: { ...filters.priceRange, max: e.target.value },
-                      })
-                    }
-                    className="w-32 h-9 text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Bouton réinitialiser */}
-              {(selectedCategory !== "Tous" ||
-                filters.stockFilter !== "all" ||
-                filters.marginFilter !== "all" ||
-                filters.priceRange.min ||
-                filters.priceRange.max ||
-                filters.statusFilter !== "all" ||
-                searchQuery) && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSelectedCategory("Tous");
-                      setFilters({
-                        stockFilter: "all",
-                        marginFilter: "all",
-                        priceRange: { min: "", max: "" },
-                        statusFilter: "all",
-                      });
-                    }}
-                    className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Réinitialiser tous les filtres
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          {/* FILTRES DÉSACTIVÉS - Search and Filters Section */}
+          {/* <div className="mb-6 space-y-4">
+            Search Bar + Filtres (catégories, stock, marge, statut, prix, réinitialiser)
+          </div> */}
 
         {/* Products Data Grid */}
         {filteredProducts.length === 0 ? (
@@ -888,15 +725,47 @@ export default function ProductsPage() {
 
                           {/* Actions */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedProduct(product)}
-                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 hover:bg-green-500/10"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Voir
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[140px]">
+                                <DropdownMenuItem
+                                  onClick={() => setSelectedProduct(product)}
+                                  className="text-green-600 focus:text-green-700 dark:text-green-400 cursor-pointer"
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Voir
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setEditingProduct(product)}
+                                  className="cursor-pointer"
+                                >
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Modifier
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteProduct(product)}
+                                  disabled={deletingId === product.id}
+                                  variant="destructive"
+                                  className="cursor-pointer"
+                                >
+                                  {deletingId === product.id ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                  )}
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       );
@@ -1105,25 +974,22 @@ export default function ProductsPage() {
                       <Filter className="h-3.5 w-3.5 text-zinc-400" />
                       Catégorie <span className="text-red-500">*</span>
                     </Label>
-                    <select
+                    <SearchableSelect
                       id="create-category"
-                      {...register("category_id")}
-                      disabled={categoriesLoading}
-                      className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/30 focus-visible:ring-offset-2 focus-visible:border-green-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">
-                        {categoriesLoading
+                      options={categoryOptions}
+                      value={watch("category_id") ?? ""}
+                      onChange={(v) => setValue("category_id", v)}
+                      placeholder={
+                        categoriesLoading
                           ? "Chargement des catégories..."
                           : activeCategories.length === 0
                             ? "Aucune catégorie (créez-en dans Catégories)"
-                            : "Sélectionner une catégorie"}
-                      </option>
-                      {activeCategories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
+                            : "Sélectionner une catégorie"
+                      }
+                      searchPlaceholder="Rechercher une catégorie…"
+                      emptyMessage="Aucune catégorie trouvée"
+                      disabled={categoriesLoading}
+                    />
                     {errors.category_id && (
                       <p className="text-xs text-red-500">{errors.category_id.message}</p>
                     )}
@@ -1136,19 +1002,15 @@ export default function ProductsPage() {
                         <Building2 className="h-3.5 w-3.5 text-zinc-400" />
                         Organisation <span className="text-red-500">*</span>
                       </Label>
-                      <select
+                      <SearchableSelect
                         id="create-org"
-                        {...register("organization_id")}
-                        className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/30 focus-visible:ring-offset-2 focus-visible:border-green-500/50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="">Sélectionner une organisation</option>
-                        {organizations.map((org) => (
-                          <option key={org.id} value={org.id}>
-                            {org.name}
-                            {org.is_default ? " (par défaut)" : ""}
-                          </option>
-                        ))}
-                      </select>
+                        options={organizationOptions}
+                        value={watch("organization_id") ?? ""}
+                        onChange={(v) => setValue("organization_id", v)}
+                        placeholder="Sélectionner une organisation"
+                        searchPlaceholder="Rechercher une organisation…"
+                        emptyMessage="Aucune organisation trouvée"
+                      />
                       {errors.organization_id && (
                         <p className="text-xs text-red-500">
                           {errors.organization_id.message}
@@ -1370,20 +1232,18 @@ export default function ProductsPage() {
                             </div>
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">Catégorie</Label>
-                              <select
-                                {...registerEdit("category_id")}
+                              <SearchableSelect
+                                options={categoryOptions}
+                                value={watchEdit("category_id") ?? ""}
+                                onChange={(v) => setValueEdit("category_id", v)}
+                                placeholder={
+                                  categoriesLoading ? "Chargement des catégories..." : "Sélectionner une catégorie"
+                                }
+                                searchPlaceholder="Rechercher une catégorie…"
+                                emptyMessage="Aucune catégorie trouvée"
                                 disabled={categoriesLoading}
-                                className="flex h-9 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                <option value="">
-                                  {categoriesLoading ? "Chargement des catégories..." : "Sélectionner une catégorie"}
-                                </option>
-                                {activeCategories.map((cat) => (
-                                  <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                  </option>
-                                ))}
-                              </select>
+                                className="[&_button]:h-9"
+                              />
                               {errorsEdit.category_id && (
                                 <p className="text-xs text-red-500">{errorsEdit.category_id.message}</p>
                               )}
@@ -1426,6 +1286,7 @@ export default function ProductsPage() {
           </div>,
           document.body
         )}
+      </div>
       </div>
     </div>
   );

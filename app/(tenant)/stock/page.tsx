@@ -24,6 +24,14 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import {
   Warehouse,
   Plus,
@@ -37,6 +45,8 @@ import {
   Pencil,
   Trash2,
   Hash,
+  Eye,
+  MoreVertical,
 } from "lucide-react";
 
 const createOrAdjustStockSchema = z.object({
@@ -49,6 +59,7 @@ type CreateOrAdjustStockFormValues = z.infer<typeof createOrAdjustStockSchema>;
 
 const updateQuantitySchema = z.object({
   quantity: z.number().int().min(0, "La quantité doit être ≥ 0"),
+  reason: z.string().optional(),
 });
 
 type UpdateQuantityFormValues = z.infer<typeof updateQuantitySchema>;
@@ -125,9 +136,22 @@ export default function StockPage() {
   );
   const { data: products = [] } = useProducts(tenantId, selectedOrgId);
 
+  const organizationOptions = React.useMemo(
+    () => organizations.map((org) => ({ value: org.id, label: org.name })),
+    [organizations]
+  );
+  const productOptions = React.useMemo(
+    () =>
+      products.map((p) => ({
+        value: p.id,
+        label: `${p.name}${p.sku ? ` (${p.sku})` : ""}`,
+      })),
+    [products]
+  );
+
   const updateQuantityForm = useForm<UpdateQuantityFormValues>({
     resolver: zodResolver(updateQuantitySchema),
-    defaultValues: { quantity: 0 },
+    defaultValues: { quantity: 0, reason: "" },
   });
 
   const createOrAdjustStock = useCreateOrAdjustStock(
@@ -163,7 +187,11 @@ export default function StockPage() {
     async (values) => {
       if (!editingStock) return;
       await updateQuantity.mutateAsync(
-        { id: editingStock.id, quantity: values.quantity },
+        {
+          id: editingStock.id,
+          quantity: values.quantity,
+          reason: values.reason?.trim() || undefined,
+        },
         {
           onSuccess: () => {
             setEditingStock(null);
@@ -187,7 +215,10 @@ export default function StockPage() {
 
   useEffect(() => {
     if (editingStock) {
-      updateQuantityForm.reset({ quantity: editingStock.quantity });
+      updateQuantityForm.reset({
+        quantity: editingStock.quantity,
+        reason: "",
+      });
     }
   }, [editingStock, updateQuantityForm]);
 
@@ -415,36 +446,48 @@ export default function StockPage() {
                             {stock.quantity}
                           </span>
                         </td>
-                        <td className="px-6 py-4 flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedStock(stock)}
-                            className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
-                          >
-                            Voir
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingStock(stock)}
-                            className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(stock)}
-                            disabled={deletingId === stock.id}
-                            className="text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-500/10"
-                          >
-                            {deletingId === stock.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
+                        <td className="px-6 py-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[140px]">
+                              <DropdownMenuItem
+                                onClick={() => setSelectedStock(stock)}
+                                className="text-emerald-600 focus:text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Voir
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setEditingStock(stock)}
+                                className="cursor-pointer"
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(stock)}
+                                disabled={deletingId === stock.id}
+                                variant="destructive"
+                                className="cursor-pointer"
+                              >
+                                {deletingId === stock.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )}
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -620,18 +663,15 @@ export default function StockPage() {
                   <form onSubmit={onSubmitCreate} className="p-6 space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="organization_id">Organisation</Label>
-                      <select
+                      <SearchableSelect
                         id="organization_id"
-                        {...register("organization_id")}
-                        className="flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
-                      >
-                        <option value="">Choisir une organisation</option>
-                        {organizations.map((org) => (
-                          <option key={org.id} value={org.id}>
-                            {org.name}
-                          </option>
-                        ))}
-                      </select>
+                        options={organizationOptions}
+                        value={watch("organization_id") ?? ""}
+                        onChange={(v) => setValue("organization_id", v)}
+                        placeholder="Choisir une organisation"
+                        searchPlaceholder="Rechercher une organisation…"
+                        emptyMessage="Aucune organisation trouvée"
+                      />
                       {errors.organization_id && (
                         <p className="text-sm text-red-600 dark:text-red-400">
                           {errors.organization_id.message}
@@ -640,18 +680,15 @@ export default function StockPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="product_id">Produit</Label>
-                      <select
+                      <SearchableSelect
                         id="product_id"
-                        {...register("product_id")}
-                        className="flex h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
-                      >
-                        <option value="">Choisir un produit</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} {p.sku ? `(${p.sku})` : ""}
-                          </option>
-                        ))}
-                      </select>
+                        options={productOptions}
+                        value={watch("product_id") ?? ""}
+                        onChange={(v) => setValue("product_id", v)}
+                        placeholder="Choisir un produit"
+                        searchPlaceholder="Rechercher un produit…"
+                        emptyMessage="Aucun produit trouvé"
+                      />
                       {errors.product_id && (
                         <p className="text-sm text-red-600 dark:text-red-400">
                           {errors.product_id.message}
@@ -756,6 +793,21 @@ export default function StockPage() {
                             updateQuantityForm.formState.errors.quantity
                               .message
                           }
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_reason">Raison (optionnel)</Label>
+                      <Input
+                        id="edit_reason"
+                        type="text"
+                        placeholder="Ex. Inventaire, réception, casse…"
+                        {...updateQuantityForm.register("reason")}
+                        className="bg-white dark:bg-zinc-900"
+                      />
+                      {updateQuantityForm.formState.errors.reason && (
+                        <p className="text-sm text-red-600 dark:text-red-400">
+                          {updateQuantityForm.formState.errors.reason.message}
                         </p>
                       )}
                     </div>

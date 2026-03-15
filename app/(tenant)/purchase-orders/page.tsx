@@ -10,6 +10,14 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { useTenantId, useSelectedOrganizationId } from "@/shared/tenant/store";
 import {
   usePurchaseOrders,
@@ -33,7 +41,9 @@ import {
   Hash,
   Package,
   Truck,
+  MoreVertical,
 } from "lucide-react";
+import { formatPriceFCFA } from "@/shared/utils";
 
 const STATUS_TRANSLATIONS: Record<string, string> = {
   draft: "Brouillon",
@@ -68,9 +78,8 @@ const STATUS_FILTERS = [
   { value: "received", label: "Réceptionné" },
 ];
 
-const formatPrice = (price: number | string | undefined): string => {
-  return `${Number(price ?? 0).toLocaleString("fr-FR")} FCFA`;
-};
+const formatPrice = (price: number | string | undefined): string =>
+  formatPriceFCFA(price ?? 0);
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "—";
@@ -213,6 +222,7 @@ export default function PurchaseOrdersPage() {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CreatePurchaseOrderFormValues>({
     resolver: zodResolver(createPurchaseOrderSchema),
@@ -224,6 +234,23 @@ export default function PurchaseOrdersPage() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
+
+  const supplierOptions = React.useMemo(
+    () =>
+      suppliers.map((s) => ({
+        value: s.id,
+        label: `${s.name}${s.phone ? ` – ${s.phone}` : ""}`,
+      })),
+    [suppliers]
+  );
+  const productOptions = React.useMemo(
+    () =>
+      products.map((p) => ({
+        value: p.id,
+        label: `${p.name} – ${formatPriceFCFA(p.price)}`,
+      })),
+    [products]
+  );
 
   const onSubmitCreate = handleSubmit((values) => {
     createMutation.mutate(
@@ -398,59 +425,17 @@ export default function PurchaseOrdersPage() {
               </p>
             </div>
           )}
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 dark:text-zinc-600 group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400 transition-colors" />
-            <Input
-              type="text"
-              placeholder="Rechercher par référence, fournisseur, produit..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-12 h-14 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border-zinc-200/80 dark:border-zinc-800/80 focus:border-indigo-500 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-base shadow-lg"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                <X className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
-              </button>
-            )}
+          {/* FILTRES ET GRAPHIQUES (cartes stats) DÉSACTIVÉS */}
+          {/* <div className="relative group">
+            <Search ... />
           </div>
-
           <div className="flex items-center gap-2 flex-wrap">
-            {STATUS_FILTERS.map((filter) => (
-              <Button
-                key={filter.value}
-                onClick={() => setSelectedStatus(filter.value)}
-                variant="ghost"
-                className={`px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                  selectedStatus === filter.value
-                    ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white border-0 shadow-lg shadow-indigo-500/20"
-                    : "bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/50"
-                }`}
-              >
-                {filter.label}
-              </Button>
-            ))}
+            {STATUS_FILTERS.map(...)}
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-indigo-500/20 to-violet-500/20">
-                  <ClipboardList className="h-4 w-4 text-indigo-500" />
-                </div>
-              </div>
-              <div className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">
-                {ordersList.length}
-              </div>
-              <p className="text-xs text-zinc-500 font-medium">
-                Bons de commande au total
-              </p>
-            </CardContent>
-          </Card>
+          <Card>... Bons de commande au total ...</Card>
+        </div> */}
         </div>
 
         <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-xl overflow-hidden">
@@ -459,9 +444,6 @@ export default function PurchaseOrdersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-200/80 bg-gradient-to-r from-zinc-50 to-white dark:border-zinc-900/50 dark:from-zinc-950/50 dark:to-zinc-900/30">
-                    <th className="px-6 py-4 text-left text-xs font-bold text-zinc-700 uppercase tracking-wider dark:text-zinc-300">
-                      ID
-                    </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-zinc-700 uppercase tracking-wider dark:text-zinc-300">
                       Référence
                     </th>
@@ -494,7 +476,7 @@ export default function PurchaseOrdersPage() {
                 <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-900/50">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-6 py-12 text-center">
+                      <td colSpan={9} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <ClipboardList className="h-12 w-12 text-zinc-400 dark:text-zinc-600 mb-4" />
                           <p className="text-zinc-600 dark:text-zinc-400 font-medium">
@@ -520,11 +502,6 @@ export default function PurchaseOrdersPage() {
                           key={order.id}
                           className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-colors"
                         >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-xs font-mono text-zinc-500 dark:text-zinc-500" title={order.id}>
-                              {truncateId(order.id)}
-                            </span>
-                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-semibold bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">
                               {getOrderDisplayId(order)}
@@ -568,49 +545,54 @@ export default function PurchaseOrdersPage() {
                             {formatDateTime(order.updated_at)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                title="Voir"
-                                onClick={() => setSelectedOrder(order)}
-                              >
-                                <Eye className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                              </Button>
-                              {canConfirm(order) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-green-600 hover:text-green-700 dark:text-green-400"
-                                  title="Confirmer"
-                                  onClick={() => handleConfirm(order.id)}
-                                  disabled={confirmMutation.isPending}
+                                  className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                                 >
-                                  {confirmMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  )}
+                                  <MoreVertical className="h-4 w-4" />
                                 </Button>
-                              )}
-                              {canGoodsReceipt(order) && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                                  title="Réception marchandise"
-                                  onClick={() => handleGoodsReceipt(order.id)}
-                                  disabled={goodsReceiptMutation.isPending}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[180px]">
+                                <DropdownMenuItem
+                                  onClick={() => setSelectedOrder(order)}
+                                  className="cursor-pointer"
                                 >
-                                  {goodsReceiptMutation.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Truck className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              )}
-                            </div>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Voir
+                                </DropdownMenuItem>
+                                {canConfirm(order) && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleConfirm(order.id)}
+                                    disabled={confirmMutation.isPending}
+                                    className="text-green-600 focus:text-green-700 dark:text-green-400 cursor-pointer"
+                                  >
+                                    {confirmMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    )}
+                                    Confirmer
+                                  </DropdownMenuItem>
+                                )}
+                                {canGoodsReceipt(order) && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleGoodsReceipt(order.id)}
+                                    disabled={goodsReceiptMutation.isPending}
+                                    className="text-blue-600 focus:text-blue-700 dark:text-blue-400 cursor-pointer"
+                                  >
+                                    {goodsReceiptMutation.isPending ? (
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Truck className="h-4 w-4 mr-2" />
+                                    )}
+                                    Réception marchandise
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       );
@@ -772,7 +754,7 @@ export default function PurchaseOrdersPage() {
                                     </td>
                                     <td className="px-3 py-2 font-medium">{productName}</td>
                                     <td className="px-3 py-2 text-right">{line.quantity}</td>
-                                    <td className="px-3 py-2 text-right">{formatPrice(line.unit_price)}</td>
+                                    <td className="px-3 py-2 text-right text-zinc-500">{formatPrice(line.unit_price)}</td>
                                     <td className="px-3 py-2 text-right font-medium">
                                       {formatPrice(lineTotal)}
                                     </td>
@@ -911,20 +893,18 @@ export default function PurchaseOrdersPage() {
                         >
                           Fournisseur <span className="text-red-500">*</span>
                         </Label>
-                        <select
+                        <SearchableSelect
                           id="po-supplier"
-                          {...register("supplier_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
-                        >
-                          <option value="">
-                            Sélectionner un fournisseur
-                          </option>
-                          {suppliers.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name} {s.phone ? `– ${s.phone}` : ""}
-                            </option>
-                          ))}
-                        </select>
+                          options={supplierOptions}
+                          value={watch("supplier_id") ?? ""}
+                          onChange={(v) => setValue("supplier_id", v)}
+                          placeholder="Sélectionner un fournisseur"
+                          searchPlaceholder="Rechercher un fournisseur…"
+                          emptyMessage="Aucun fournisseur trouvé"
+                          getOptionLabel={(opt) =>
+                            opt.label.includes(" – ") ? opt.label.split(" – ")[0] : opt.label
+                          }
+                        />
                         {errors.supplier_id && (
                           <p className="text-xs text-red-500">
                             {errors.supplier_id.message}
@@ -971,29 +951,20 @@ export default function PurchaseOrdersPage() {
                               <span className="text-xs font-medium text-zinc-500">
                                 Produit
                               </span>
-                              <select
-                                {...register(`lines.${index}.product_id`, {
-                                  onChange: (e) => {
-                                    const product = products.find(
-                                      (p) => p.id === e.target.value
-                                    );
-                                    if (product)
-                                      setValue(
-                                        `lines.${index}.unit_price`,
-                                        product.price
-                                      );
-                                  },
-                                })}
-                                className="flex h-9 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 text-sm"
-                              >
-                                <option value="">Choisir</option>
-                                {products.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name} –{" "}
-                                    {p.price.toLocaleString("fr-FR")} FCFA
-                                  </option>
-                                ))}
-                              </select>
+                              <SearchableSelect
+                                options={productOptions}
+                                value={watch(`lines.${index}.product_id`) ?? ""}
+                                onChange={(v) => {
+                                  setValue(`lines.${index}.product_id`, v);
+                                  const product = products.find((p) => p.id === v);
+                                  if (product)
+                                    setValue(`lines.${index}.unit_price`, product.price);
+                                }}
+                                placeholder="Choisir un produit"
+                                searchPlaceholder="Rechercher un produit…"
+                                emptyMessage="Aucun produit trouvé"
+                                className="[&_button]:h-9"
+                              />
                               {errors.lines?.[index]?.product_id && (
                                 <p className="text-xs text-red-500">
                                   {
@@ -1033,15 +1004,9 @@ export default function PurchaseOrdersPage() {
                                 {...register(`lines.${index}.unit_price`, {
                                   valueAsNumber: true,
                                 })}
-                                className="h-9"
+                                className="h-9 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-80"
+                                readOnly
                               />
-                              {errors.lines?.[index]?.unit_price && (
-                                <p className="text-xs text-red-500">
-                                  {
-                                    errors.lines[index]?.unit_price?.message
-                                  }
-                                </p>
-                              )}
                             </div>
                             <Button
                               type="button"
@@ -1056,6 +1021,22 @@ export default function PurchaseOrdersPage() {
                           </div>
                         ))}
                       </div>
+                      {fields.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end">
+                          <div className="text-sm">
+                            <span className="text-zinc-500 dark:text-zinc-400 mr-2">Total :</span>
+                            <span className="font-semibold text-base bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">
+                              {formatPrice(
+                                (watch("lines") || []).reduce(
+                                  (sum: number, line: { quantity?: number; unit_price?: number }) =>
+                                    sum + (Number(line?.quantity) || 0) * (Number(line?.unit_price) || 0),
+                                  0
+                                )
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-3 pt-2">

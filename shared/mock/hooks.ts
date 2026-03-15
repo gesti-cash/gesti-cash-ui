@@ -381,3 +381,183 @@ export function useMockDashboardStats(period?: string) {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
+
+// ============================================
+// Stock Movements Hooks
+// ============================================
+
+export function useMockMovements(filters?: {
+  type?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  productId?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const tenantId = useTenantId();
+
+  return useQuery({
+    queryKey: ["mock", "movements", tenantId, filters],
+    queryFn: () => mockAPI.movements.list(tenantId!, filters),
+    enabled: !!tenantId && isMockEnabled(),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useMockCreateMovement() {
+  const queryClient = useQueryClient();
+  const tenantId = useTenantId();
+
+  return useMutation({
+    mutationFn: async (data: {
+      productId: string;
+      productName: string;
+      productSku?: string;
+      type: "IN" | "OUT" | "ADJUSTMENT" | "TRANSFER";
+      quantity: number;
+      quantityBefore?: number;
+      quantityAfter?: number;
+      reference?: string;
+      reason?: string;
+      organizationId?: string;
+    }) => mockAPI.movements.create(tenantId!, data as any),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mock", "movements"] });
+    },
+  });
+}
+
+// ============================================
+// Cash (Caisse) Hooks
+// ============================================
+
+export function useMockCashSessions(filters?: {
+  status?: "open" | "closed";
+  page?: number;
+  limit?: number;
+}) {
+  const tenantId = useTenantId();
+
+  return useQuery({
+    queryKey: ["mock", "cash", "sessions", tenantId, filters],
+    queryFn: () => mockAPI.cash.sessions.list(tenantId!, filters),
+    enabled: !!tenantId && isMockEnabled(),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useMockOpenCashSession() {
+  const tenantId = useTenantId();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      openingBalance: number;
+      openedBy?: string;
+      organizationId?: string;
+    }) => mockAPI.cash.sessions.open(tenantId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mock", "cash"] });
+    },
+  });
+}
+
+export function useMockCloseCashSession() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      sessionId,
+      closingBalance,
+      closedBy,
+    }: {
+      sessionId: string;
+      closingBalance: number;
+      closedBy?: string;
+    }) => mockAPI.cash.sessions.close(sessionId, { closingBalance, closedBy }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mock", "cash"] });
+    },
+  });
+}
+
+export function useMockOpenCashSessionQuery() {
+  const tenantId = useTenantId();
+
+  return useQuery({
+    queryKey: ["mock", "cash", "open-session", tenantId],
+    queryFn: () => mockAPI.cash.sessions.getOpen(tenantId!),
+    enabled: !!tenantId && isMockEnabled(),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useMockCashTransactions(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["mock", "cash", "transactions", sessionId],
+    queryFn: () => mockAPI.cash.transactions.list(sessionId!),
+    enabled: !!sessionId && isMockEnabled(),
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useMockAddCashTransaction(sessionId: string | null) {
+  const tenantId = useTenantId();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      type: "in" | "out";
+      amount: number;
+      label: string;
+      reference?: string;
+      createdBy?: string;
+    }) => {
+      if (!sessionId || !tenantId) throw new Error("No session");
+      return mockAPI.cash.transactions.add(sessionId, tenantId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mock", "cash"] });
+    },
+  });
+}
+
+// ============================================
+// ROAS Hooks
+// ============================================
+
+export function useMockRoasCampaigns(filters?: {
+  status?: string;
+  channel?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const tenantId = useTenantId();
+
+  return useQuery({
+    queryKey: ["mock", "roas", tenantId, filters],
+    queryFn: () => mockAPI.roas.list(tenantId!, filters),
+    enabled: !!tenantId && isMockEnabled(),
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useMockCreateRoasCampaign() {
+  const tenantId = useTenantId();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      channel: string;
+      spend: number;
+      revenueCashReal: number;
+      startDate: string;
+      endDate?: string;
+      status: "active" | "paused" | "ended";
+    }) => mockAPI.roas.create(tenantId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mock", "roas"] });
+    },
+  });
+}
