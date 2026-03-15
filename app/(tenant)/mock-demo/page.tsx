@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
+import { formatAmount } from "@/shared/utils";
 
 // Types pour les données du dashboard
 interface CountryView {
@@ -97,7 +98,7 @@ export default function DashboardPage() {
   ];
 
   const formatCurrency = (amount: number, currency: string = "fcfa") => {
-    return `${amount.toLocaleString("fr-FR")} ${currency}`;
+    return `${formatAmount(amount)} ${currency}`;
   };
 
   const maxCashAmount = Math.max(...last7DaysCash.map((d) => d.amount), 1);
@@ -280,196 +281,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Vue par Pays Section - Améliorée */}
-        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 shadow-lg shadow-blue-500/10 dark:from-blue-500/10 dark:to-cyan-500/10 dark:border-blue-500/20">
-              <Globe className="h-5 w-5 text-blue-500 dark:text-blue-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Vue par Pays</h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-500">Répartition géographique des données</p>
-            </div>
-          </div>
-          <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 overflow-hidden shadow-xl dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 hover:shadow-2xl transition-shadow duration-300">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-200/80 bg-gradient-to-r from-zinc-50 to-white dark:border-zinc-900/50 dark:from-zinc-950/50 dark:to-zinc-900/30">
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-700 uppercase tracking-wider dark:text-zinc-300">
-                        Pays
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Devise
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Argent Entré
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Bénéfice Réel
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Cash Livreurs
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-zinc-600 uppercase tracking-wider dark:text-zinc-400">
-                        Commandes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-900/50">
-                    {countryViews.map((view, index) => (
-                      <tr 
-                        key={index} 
-                        className="hover:bg-gradient-to-r hover:from-green-500/5 hover:to-emerald-500/5 transition-all duration-300 group cursor-pointer"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="relative">
-                              <div className="h-3 w-3 rounded-full bg-green-500 group-hover:scale-150 transition-transform duration-300 shadow-lg shadow-green-500/50 dark:bg-green-400"></div>
-                              <div className="absolute inset-0 h-3 w-3 rounded-full bg-green-500/30 animate-ping"></div>
-                            </div>
-                            <span className="text-sm font-semibold text-zinc-900 capitalize group-hover:text-green-600 transition-colors dark:text-zinc-100 dark:group-hover:text-green-400">
-                              {view.country}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant="outline" className="text-xs border-zinc-300 text-zinc-700 bg-zinc-100 font-semibold dark:border-zinc-800 dark:text-zinc-300 dark:bg-zinc-900/50">
-                            {view.currency.toUpperCase()}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent dark:from-green-400 dark:to-emerald-400">
-                            {formatCurrency(view.moneyEntered, view.currency)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent dark:from-emerald-400 dark:to-teal-400">
-                            {formatCurrency(view.realProfit, view.currency)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent dark:from-orange-400 dark:to-amber-400">
-                            {formatCurrency(view.cashDeliverers, view.currency)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{view.orders}</div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Graphiques Section - Améliorée */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-          {/* Encaissements 7 derniers jours */}
-          <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 shadow-xl hover:shadow-2xl transition-all duration-300 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-zinc-900 flex items-center gap-3 dark:text-zinc-100">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 shadow-lg shadow-green-500/10 dark:from-green-500/15 dark:to-emerald-500/15">
-                  <TrendingUp className="h-5 w-5 text-green-500 dark:text-green-400" />
-                </div>
-                <span className="text-xl font-bold">Encaissements 7 derniers jours</span>
-              </CardTitle>
-              <CardDescription className="text-zinc-600 dark:text-zinc-400 mt-2 font-medium">
-                Évolution des recettes quotidiennes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="relative h-72">
-                {/* Y-axis labels améliorés */}
-                <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-zinc-500 pr-4 font-bold dark:text-zinc-600">
-                  {[4, 3, 2, 1].map((val) => (
-                    <span key={val}>{val}-</span>
-                  ))}
-                </div>
-                {/* Chart avec gradient amélioré */}
-                <div className="ml-12 h-full flex items-end justify-between gap-3">
-                  {last7DaysCash.map((day, index) => {
-                    const height = (day.amount / maxCashAmount) * 100;
-                    return (
-                      <div key={index} className="flex-1 flex flex-col items-center gap-3 group">
-                        <div className="relative w-full h-full flex items-end">
-                          <div
-                            className="w-full rounded-t-xl bg-gradient-to-t from-green-600 via-green-500 to-green-400 transition-all duration-500 hover:from-green-500 hover:via-green-400 hover:to-green-300 cursor-pointer shadow-xl shadow-green-500/30 group-hover:shadow-green-500/50 group-hover:scale-105 dark:from-green-700 dark:via-green-600 dark:to-green-500 dark:hover:from-green-600 dark:hover:via-green-500 dark:hover:to-green-400"
-                            style={{ height: `${Math.max(height, 5)}%` }}
-                            title={`${formatCurrency(day.amount)}`}
-                          />
-                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gradient-to-br from-zinc-900 to-zinc-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-2xl whitespace-nowrap border border-zinc-700 dark:bg-zinc-950 dark:border-zinc-800 z-10">
-                            {formatCurrency(day.amount)}
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-zinc-900 rotate-45 border-r border-b border-zinc-700 dark:bg-zinc-950 dark:border-zinc-800"></div>
-                          </div>
-                        </div>
-                        <div className="text-xs text-zinc-600 font-semibold dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-200 transition-colors">
-                          {day.date}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Répartition Commandes */}
-          <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 shadow-xl hover:shadow-2xl transition-all duration-300 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-zinc-900 flex items-center gap-3 dark:text-zinc-100">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 shadow-lg shadow-blue-500/10 dark:from-blue-500/15 dark:to-cyan-500/15">
-                  <ShoppingCart className="h-5 w-5 text-blue-500 dark:text-blue-400" />
-                </div>
-                <span className="text-xl font-bold">Répartition Commandes</span>
-              </CardTitle>
-              <CardDescription className="text-zinc-600 dark:text-zinc-400 mt-2 font-medium">
-                Statut des commandes en temps réel
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {orderDistribution.map((item, index) => {
-                  const Icon = item.icon;
-                  const iconColors = [
-                    "text-green-500 dark:text-green-400",
-                    "text-yellow-500 dark:text-yellow-400",
-                    "text-red-500 dark:text-red-400",
-                  ];
-                  return (
-                    <div key={index} className="space-y-4 group">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${item.color} bg-opacity-20 shadow-lg dark:bg-opacity-10 group-hover:scale-110 transition-transform duration-300`}>
-                            <Icon className={`h-5 w-5 ${iconColors[index]}`} />
-                          </div>
-                          <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{item.status}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xl font-bold bg-gradient-to-r from-zinc-900 to-zinc-700 bg-clip-text text-transparent dark:from-zinc-100 dark:to-zinc-300">
-                            {item.count}
-                          </div>
-                          <div className="text-xs font-semibold text-zinc-600 dark:text-zinc-500">{item.percentage}%</div>
-                        </div>
-                      </div>
-                      <div className="relative w-full bg-zinc-200/80 rounded-full h-3.5 overflow-hidden shadow-inner dark:bg-zinc-900/50">
-                        <div
-                          className={`absolute left-0 top-0 h-full bg-gradient-to-r ${item.color} rounded-full transition-all duration-1000 ease-out shadow-lg group-hover:shadow-xl`}
-                          style={{ width: `${item.percentage}%` }}
-                        >
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent"></div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* FILTRES ET GRAPHIQUES DÉSACTIVÉS - Vue par Pays + Graphiques */}
+        {/* Vue par Pays Section
+        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200"> ... </div>
+        Graphiques Section
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 ..."> ... </div>
+        */}
       </div>
     </div>
   );

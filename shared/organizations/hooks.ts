@@ -24,6 +24,16 @@ export interface CreateOrganizationInput {
   is_default: boolean;
 }
 
+/** Champs modifiables pour PATCH (tous optionnels) */
+export interface UpdateOrganizationInput {
+  name?: string;
+  code?: string;
+  country_id?: string;
+  city_id?: string;
+  address?: string;
+  is_default?: boolean;
+}
+
 // Récupérer les organisations du tenant courant
 export const useOrganizations = (tenantId?: string) => {
   return useQuery({
@@ -77,6 +87,44 @@ export const useCreateOrganization = (tenantId?: string) => {
     onError: (error) => {
       const apiError = extractApiError(error);
       console.error("Create organization error:", apiError);
+    },
+  });
+};
+
+// Modifier une organisation - PATCH /api/v1/organizations/{id}
+export const useUpdateOrganization = (tenantId?: string) => {
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...input
+    }: UpdateOrganizationInput & { id: string }) => {
+      if (!tenantId) {
+        throw new Error("No tenant ID provided");
+      }
+      if (!id) {
+        throw new Error("No organization ID provided");
+      }
+
+      const response = await apiClient.patch<Organization>(
+        `/organizations/${id}`,
+        input,
+        {
+          params: { tenantId },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      if (tenantId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.organizations.list(tenantId),
+        });
+      }
+    },
+    onError: (error) => {
+      const apiError = extractApiError(error);
+      console.error("Update organization error:", apiError);
     },
   });
 };

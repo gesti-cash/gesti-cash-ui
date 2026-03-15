@@ -21,6 +21,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
+import { formatAmount } from "@/shared/utils";
 
 // Types pour les données du dashboard
 interface CountryView {
@@ -97,7 +98,7 @@ export default function DashboardPage() {
   ];
 
   const formatCurrency = (amount: number, currency: string = "fcfa") => {
-    return `${amount.toLocaleString("fr-FR")} ${currency}`;
+    return `${formatAmount(amount)} ${currency}`;
   };
 
   const maxCashAmount = Math.max(...last7DaysCash.map((d) => d.amount), 1);
@@ -278,8 +279,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Vue par Pays Section - Améliorée */}
-        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+        {/* FILTRES ET GRAPHIQUES DÉSACTIVÉS - Vue par Pays Section */}
+        {/* <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 shadow-lg shadow-blue-500/10 dark:from-blue-500/10 dark:to-cyan-500/10 dark:border-blue-500/20">
               <Globe className="h-5 w-5 text-blue-500 dark:text-blue-400" />
@@ -362,11 +363,10 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
-        {/* Graphiques Section - Améliorée */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-          {/* Encaissements 7 derniers jours */}
+        {/* FILTRES ET GRAPHIQUES DÉSACTIVÉS - Graphiques Section */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
           <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 shadow-xl hover:shadow-2xl transition-all duration-300 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
             <CardHeader className="pb-4">
               <CardTitle className="text-zinc-900 flex items-center gap-3 dark:text-zinc-100">
@@ -381,13 +381,11 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="relative h-72">
-                {/* Y-axis labels améliorés */}
                 <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-zinc-500 pr-4 font-bold dark:text-zinc-600">
                   {[4, 3, 2, 1].map((val) => (
                     <span key={val}>{val}-</span>
                   ))}
                 </div>
-                {/* Chart avec gradient amélioré */}
                 <div className="ml-12 h-full flex items-end justify-between gap-3">
                   {last7DaysCash.map((day, index) => {
                     const height = (day.amount / maxCashAmount) * 100;
@@ -415,7 +413,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Répartition Commandes */}
           <Card className="bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 shadow-xl hover:shadow-2xl transition-all duration-300 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50">
             <CardHeader className="pb-4">
               <CardTitle className="text-zinc-900 flex items-center gap-3 dark:text-zinc-100">
@@ -467,7 +464,7 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </div>
   );

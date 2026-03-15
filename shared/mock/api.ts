@@ -12,6 +12,10 @@ import type {
   MockCODOrder,
   MockCustomer,
   MockDashboardStats,
+  MockStockMovement,
+  MockCashSession,
+  MockCashTransaction,
+  MockRoasCampaign,
 } from "./generators";
 
 // ============================================
@@ -314,6 +318,99 @@ export const mockAPI = {
       period?: string
     ): Promise<MockDashboardStats> => {
       return simulateApiCall(() => mockDB.getDashboardStats(tenantId, period));
+    },
+  },
+
+  // ============================================
+  // Stock Movements (Mouvements)
+  // ============================================
+
+  movements: {
+    list: async (
+      tenantId: string,
+      filters?: {
+        type?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        productId?: string;
+        page?: number;
+        limit?: number;
+      }
+    ): Promise<PaginatedResponse<MockStockMovement>> => {
+      return simulateApiCall(() => mockDB.getStockMovements(tenantId, filters));
+    },
+    create: async (
+      tenantId: string,
+      data: Omit<MockStockMovement, "id" | "tenantId" | "createdAt">
+    ): Promise<MockStockMovement> => {
+      return simulateApiCall(() => mockDB.createStockMovement(tenantId, data));
+    },
+  },
+
+  // ============================================
+  // Cash (Caisse)
+  // ============================================
+
+  cash: {
+    sessions: {
+      list: async (
+        tenantId: string,
+        filters?: { status?: "open" | "closed"; page?: number; limit?: number }
+      ): Promise<PaginatedResponse<MockCashSession>> => {
+        return simulateApiCall(() => mockDB.getCashSessions(tenantId, filters));
+      },
+      getOpen: async (tenantId: string): Promise<MockCashSession | null> => {
+        return simulateApiCall(() => mockDB.getOpenCashSession(tenantId));
+      },
+      open: async (
+        tenantId: string,
+        data: { openingBalance: number; openedBy?: string; organizationId?: string }
+      ): Promise<MockCashSession> => {
+        return simulateApiCall(() => mockDB.openCashSession(tenantId, data));
+      },
+      close: async (
+        sessionId: string,
+        data: { closingBalance: number; closedBy?: string }
+      ): Promise<MockCashSession> => {
+        return simulateApiCall(() => {
+          const s = mockDB.closeCashSession(sessionId, data.closingBalance, data.closedBy);
+          if (!s) throw new Error("Session not found or already closed");
+          return s;
+        });
+      },
+    },
+    transactions: {
+      list: async (sessionId: string): Promise<MockCashTransaction[]> => {
+        return simulateApiCall(() => mockDB.getCashTransactions(sessionId));
+      },
+      add: async (
+        sessionId: string,
+        tenantId: string,
+        data: { type: "in" | "out"; amount: number; label: string; reference?: string; createdBy?: string }
+      ): Promise<MockCashTransaction> => {
+        const tx = mockDB.addCashTransaction(sessionId, tenantId, data);
+        if (!tx) throw new Error("Session not found or closed");
+        return tx;
+      },
+    },
+  },
+
+  // ============================================
+  // ROAS Campaigns
+  // ============================================
+
+  roas: {
+    list: async (
+      tenantId: string,
+      filters?: { status?: string; channel?: string; page?: number; limit?: number }
+    ): Promise<PaginatedResponse<MockRoasCampaign>> => {
+      return simulateApiCall(() => mockDB.getRoasCampaigns(tenantId, filters));
+    },
+    create: async (
+      tenantId: string,
+      data: Omit<MockRoasCampaign, "id" | "tenantId" | "createdAt" | "roas">
+    ): Promise<MockRoasCampaign> => {
+      return simulateApiCall(() => mockDB.createRoasCampaign(tenantId, data));
     },
   },
 

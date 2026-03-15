@@ -17,6 +17,7 @@ import {
   useMockDashboardStats,
   useMockCustomers,
 } from "./index";
+import { formatPriceFCFA } from "@/shared/utils";
 
 // ============================================
 // Exemple 1 : Liste de transactions
@@ -150,7 +151,7 @@ export function TransactionsExample() {
                 }`}
               >
                 {transaction.type === "income" ? "+" : "-"}
-                {transaction.amount.toLocaleString()} FCFA
+                {formatPriceFCFA(transaction.amount)}
               </div>
               
               <div className="flex gap-2">
@@ -224,7 +225,7 @@ export function ProductsExample() {
             <div className="text-sm text-gray-500">SKU: {product.sku}</div>
             <div className="mt-2">
               <div className="text-lg font-bold">
-                {product.price.toLocaleString()} FCFA
+                {formatPriceFCFA(product.price)}
               </div>
               <div className="text-sm">
                 Stock: {product.stock} unités
@@ -259,7 +260,7 @@ export function DashboardExample() {
         <div className="p-4 border rounded">
           <div className="text-sm text-gray-500">Revenus</div>
           <div className="text-2xl font-bold text-green-600">
-            {stats.revenue.total.toLocaleString()} FCFA
+            {formatPriceFCFA(stats.revenue.total)}
           </div>
           <div
             className={`text-sm ${
@@ -274,7 +275,7 @@ export function DashboardExample() {
         <div className="p-4 border rounded">
           <div className="text-sm text-gray-500">Dépenses</div>
           <div className="text-2xl font-bold text-red-600">
-            {stats.expenses.total.toLocaleString()} FCFA
+            {formatPriceFCFA(stats.expenses.total)}
           </div>
           <div
             className={`text-sm ${
@@ -293,7 +294,7 @@ export function DashboardExample() {
               stats.profit.total > 0 ? "text-green-600" : "text-red-600"
             }`}
           >
-            {stats.profit.total.toLocaleString()} FCFA
+            {formatPriceFCFA(stats.profit.total)}
           </div>
           <div
             className={`text-sm ${
@@ -352,7 +353,7 @@ export function DashboardExample() {
               </div>
               <div className="text-right">
                 <div className="font-bold">
-                  {product.revenue.toLocaleString()} FCFA
+                  {formatPriceFCFA(product.revenue)}
                 </div>
               </div>
             </div>
@@ -425,10 +426,10 @@ export function CODOrdersExample() {
               
               <div className="text-right">
                 <div className="font-bold">
-                  {order.totalAmount.toLocaleString()} FCFA
+                  {formatPriceFCFA(order.totalAmount)}
                 </div>
                 <div className="text-xs text-gray-500">
-                  + {order.deliveryFee.toLocaleString()} FCFA livraison
+                  + {formatPriceFCFA(order.deliveryFee)} livraison
                 </div>
               </div>
             </div>
@@ -476,7 +477,7 @@ export function CustomersExample() {
             <div className="mt-3 pt-3 border-t">
               <div className="text-sm text-gray-500">Total dépensé</div>
               <div className="text-lg font-bold text-green-600">
-                {customer.totalSpent.toLocaleString()} FCFA
+                {formatPriceFCFA(customer.totalSpent)}
               </div>
             </div>
           </div>

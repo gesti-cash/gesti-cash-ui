@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   User,
   Shield,
-  Zap
+  Zap,
+  Gift
 } from "lucide-react";
 import { 
   HiSparkles, 
@@ -46,7 +47,7 @@ const registerSchema = z.object({
     .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre"),
   confirmPassword: z.string(),
   tenantSlug: z.string()
-    .min(3, "Le nom de l'organisation doit contenir au moins 3 caractères"),
+    .min(3, "Le nom de l'entreprises doit contenir au moins 3 caractères"),
   affiliationCode: z.string().optional(),
   acceptTerms: z.boolean().refine((val) => val === true, {
     message: "Vous devez accepter les conditions d'utilisation",
@@ -248,7 +249,7 @@ export default function RegisterPage() {
                 {/* Tenant Slug */}
                 <div className="space-y-2">
                   <Label htmlFor="tenantSlug" className="text-sm font-semibold">
-                    Nom de votre organisation
+                    Nom de votre entrepises
                   </Label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -273,6 +274,33 @@ export default function RegisterPage() {
                   <p className="text-xs text-muted-foreground">
                     Un identifiant pour l&apos;URL sera généré à partir de ce nom (ex. gesticash.com/mon-entreprise).
                   </p>
+                </div>
+
+                {/* Code de parrainage */}
+                <div className="space-y-2">
+                  <Label htmlFor="affiliationCode" className="text-sm font-semibold">
+                    Code de parrainage
+                  </Label>
+                  <div className="relative">
+                    <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      {...register("affiliationCode")}
+                      id="affiliationCode"
+                      type="text"
+                      placeholder="Optionnel - Entrez le code si vous en avez un"
+                      className="pl-10 h-11"
+                    />
+                  </div>
+                  {errors.affiliationCode && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-destructive flex items-center gap-1"
+                    >
+                      <AlertCircle className="h-3 w-3" />
+                      {errors.affiliationCode.message}
+                    </motion.p>
+                  )}
                 </div>
 
                 {/* Password */}

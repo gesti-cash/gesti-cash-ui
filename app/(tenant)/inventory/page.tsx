@@ -341,74 +341,17 @@ export default function InventoryPage() {
           </div>
         )}
 
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400 group-focus-within:text-amber-500 transition-colors" />
-          <Input
-            type="text"
-            placeholder="Rechercher par référence..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 pr-12 h-12 bg-white/80 dark:bg-zinc-900/80 border-zinc-200/80 dark:border-zinc-800/80 focus:border-amber-500"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              <X className="h-4 w-4 text-zinc-400" />
-            </button>
-          )}
+        {/* FILTRES ET GRAPHIQUES (cartes stats) DÉSACTIVÉS */}
+        {/* <div className="relative group">
+          <Search ... />
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
-          {STATUS_FILTERS.map((filter) => (
-            <Button
-              key={filter.value}
-              onClick={() => setSelectedStatus(filter.value)}
-              variant="ghost"
-              className={
-                selectedStatus === filter.value
-                  ? "bg-gradient-to-r from-amber-500 to-orange-600 text-white border-0"
-                  : "bg-white/80 dark:bg-zinc-900/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
-              }
-            >
-              {filter.label}
-            </Button>
-          ))}
+          {STATUS_FILTERS.map(...)}
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="bg-white/80 dark:bg-zinc-900/50 border-zinc-200/80 dark:border-zinc-800/80">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-amber-500/20">
-                  <FolderOpen className="h-4 w-4 text-amber-500" />
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {inventories.length}
-              </div>
-              <p className="text-xs text-zinc-500 font-medium">
-                Inventaires au total
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/80 dark:bg-zinc-900/50 border-zinc-200/80 dark:border-zinc-800/80">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="p-2 rounded-lg bg-orange-500/20">
-                  <Hash className="h-4 w-4 text-orange-500" />
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                {filteredInventories.length}
-              </div>
-              <p className="text-xs text-zinc-500 font-medium">
-                Affichés (filtrés)
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+          <Card>Inventaires au total</Card>
+          <Card>Affichés (filtrés)</Card>
+        </div> */}
 
         <Card className="bg-white/80 dark:bg-zinc-900/50 border-zinc-200/80 dark:border-zinc-800/80 shadow-xl overflow-hidden">
           <CardContent className="p-0">

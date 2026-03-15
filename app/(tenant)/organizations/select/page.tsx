@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useCurrentUser } from "@/shared/auth/hooks";
-import { useOrganizations, useCreateOrganization } from "@/shared/organizations/hooks";
+import { useOrganizations, useCreateOrganization, useUpdateOrganization } from "@/shared/organizations/hooks";
 import { useTenantStore } from "@/shared/tenant/store";
 import type { Organization } from "@/shared/organizations/hooks";
 import { buildTenantFromOrganization, setOrganizationSelectedCookie } from "@/shared/organizations/utils";
@@ -13,7 +14,8 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
-import { AlertCircle, Building2, CheckCircle2, MapPin, Plus, Home, Loader2, X } from "lucide-react";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import { AlertCircle, Building2, CheckCircle2, MapPin, Plus, Home, Loader2, X, Pencil } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/shared/ui/accordion";
 import { cn } from "@/shared/utils/cn";
 
@@ -118,35 +120,31 @@ function CreateOrganizationFormSlot({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor={`country_id-${slotId}`} className="text-sm font-medium">Pays</Label>
-            <select
+            <SearchableSelect
               id={`country_id-${slotId}`}
+              options={countries.map((c) => ({ value: c.id, label: `${c.name}${c.code ? ` (${c.code})` : ""}` }))}
               value={form.country_id}
-              onChange={(e) => setForm((f) => ({ ...f, country_id: e.target.value, city_id: "" }))}
-              className={cn(selectInputClasses, "h-11 rounded-lg")}
-              required
-            >
-              <option value="">Sélectionner un pays</option>
-              {countries.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}{c.code ? ` (${c.code})` : ""}</option>
-              ))}
-            </select>
+              onChange={(v) => setForm((f) => ({ ...f, country_id: v, city_id: "" }))}
+              placeholder="Sélectionner un pays"
+              searchPlaceholder="Rechercher un pays…"
+              emptyMessage="Aucun pays trouvé"
+              className="[&_button]:h-11 [&_button]:rounded-lg"
+            />
             {countriesLoading && <p className="text-xs text-muted-foreground">Chargement...</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`city_id-${slotId}`} className="text-sm font-medium">Ville</Label>
-            <select
+            <SearchableSelect
               id={`city_id-${slotId}`}
+              options={cities.map((city) => ({ value: city.id, label: city.name }))}
               value={form.city_id}
-              onChange={(e) => setForm((f) => ({ ...f, city_id: e.target.value }))}
-              className={cn(selectInputClasses, "h-11 rounded-lg")}
-              required
+              onChange={(v) => setForm((f) => ({ ...f, city_id: v }))}
+              placeholder="Sélectionner une ville"
+              searchPlaceholder="Rechercher une ville…"
+              emptyMessage="Aucune ville trouvée"
               disabled={!form.country_id}
-            >
-              <option value="">Sélectionner une ville</option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>{city.name}</option>
-              ))}
-            </select>
+              className="[&_button]:h-11 [&_button]:rounded-lg"
+            />
             {citiesLoading && form.country_id && <p className="text-xs text-muted-foreground">Chargement...</p>}
           </div>
         </div>
@@ -189,20 +187,176 @@ function CreateOrganizationFormSlot({
   );
 }
 
+function EditOrganizationModal({
+  organization,
+  form,
+  setForm,
+  onSubmit,
+  onClose,
+  isPending,
+  error,
+  countries,
+  countriesLoading,
+  selectInputClasses,
+}: {
+  organization: Organization;
+  form: FormState;
+  setForm: (updater: FormState | ((prev: FormState) => FormState)) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+  isPending: boolean;
+  error: string | null;
+  countries: { id: string; name: string; code?: string }[];
+  countriesLoading: boolean;
+  selectInputClasses: string;
+}) {
+  const { data: cities = [], isLoading: citiesLoading } = useCities(form.country_id || null);
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+      onClick={onClose}
+    >
+      <Card
+        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto border border-border/60 bg-card shadow-2xl rounded-2xl animate-in zoom-in-95 duration-300"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border/60">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Pencil className="h-4 w-4" strokeWidth={2} />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">Modifier l'organisation</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">{organization.name}</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Fermer">
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <CardContent className="p-6">
+          {error && (
+            <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive mb-5">
+              <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+          <form onSubmit={onSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name" className="text-sm font-medium">Nom</Label>
+              <Input
+                id="edit-name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ex. Mon entreprise"
+                className="rounded-lg h-11"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-code" className="text-sm font-medium">Code <span className="text-muted-foreground font-normal">(optionnel)</span></Label>
+              <Input
+                id="edit-code"
+                value={form.code}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                placeholder="Ex. ORG-001"
+                className="rounded-lg h-11"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-country_id" className="text-sm font-medium">Pays</Label>
+                <SearchableSelect
+                  id="edit-country_id"
+                  options={countries.map((c) => ({ value: c.id, label: `${c.name}${c.code ? ` (${c.code})` : ""}` }))}
+                  value={form.country_id}
+                  onChange={(v) => setForm((f) => ({ ...f, country_id: v, city_id: "" }))}
+                  placeholder="Sélectionner un pays"
+                  searchPlaceholder="Rechercher un pays…"
+                  emptyMessage="Aucun pays trouvé"
+                  className="[&_button]:h-11 [&_button]:rounded-lg"
+                />
+                {countriesLoading && <p className="text-xs text-muted-foreground">Chargement...</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-city_id" className="text-sm font-medium">Ville</Label>
+                <SearchableSelect
+                  id="edit-city_id"
+                  options={cities.map((city) => ({ value: city.id, label: city.name }))}
+                  value={form.city_id}
+                  onChange={(v) => setForm((f) => ({ ...f, city_id: v }))}
+                  placeholder="Sélectionner une ville"
+                  searchPlaceholder="Rechercher une ville…"
+                  emptyMessage="Aucune ville trouvée"
+                  disabled={!form.country_id}
+                  className="[&_button]:h-11 [&_button]:rounded-lg"
+                />
+                {citiesLoading && form.country_id && <p className="text-xs text-muted-foreground">Chargement...</p>}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-address" className="text-sm font-medium">Adresse <span className="text-muted-foreground font-normal">(optionnel)</span></Label>
+              <Input
+                id="edit-address"
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                placeholder="Adresse complète"
+                className="rounded-lg h-11"
+              />
+            </div>
+            <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+              <input
+                id="edit-is_default"
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded-md border-input accent-primary"
+                checked={form.is_default}
+                onChange={(e) => setForm((f) => ({ ...f, is_default: e.target.checked }))}
+              />
+              <label htmlFor="edit-is_default" className="text-sm text-muted-foreground cursor-pointer leading-tight">
+                Définir comme organisation par défaut
+              </label>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isPending}>
+                Annuler
+              </Button>
+              <Button type="submit" className="flex-1 h-11 rounded-xl font-semibold" disabled={isPending}>
+                {isPending ? <><Loader2 className="h-4 w-4 animate-spin" /> Enregistrement...</> : <>Enregistrer</>}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SelectOrganizationPage() {
   const router = useRouter();
   const { data: user } = useCurrentUser();
   const tenantId = user?.tenantId;
+  const tenant = useTenantStore((s) => s.tenant);
 
   const { data: organizations, isLoading, isError } = useOrganizations(tenantId);
+
+  // Nom de l'entreprise : tenant du store ou organisation par défaut/première
+  const companyName =
+    tenant?.name ??
+    (organizations?.length
+      ? (organizations.find((o) => o.is_default) ?? organizations[0])?.name
+      : null);
   const createOrganizationMutation = useCreateOrganization(tenantId);
+  const updateOrganizationMutation = useUpdateOrganization(tenantId);
 
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(initialFormState());
   const [accordionValue, setAccordionValue] = useState<string[]>([]);
   const [slots, setSlots] = useState<string[]>(() => ["create-1"]);
   const [formBySlot, setFormBySlot] = useState<Record<string, ReturnType<typeof initialFormState>>>(() => ({ "create-1": initialFormState() }));
   const [formError, setFormError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+  const [editFormError, setEditFormError] = useState<string | null>(null);
 
   const { data: countries = [], isLoading: countriesLoading } = useCountries();
 
@@ -268,6 +422,41 @@ export default function SelectOrganizationPage() {
     setAccordionValue((prev) => prev.filter((v) => v !== slotId));
   };
 
+  // Pré-remplir le formulaire d’édition quand une organisation est sélectionnée
+  useEffect(() => {
+    if (editingOrganization) {
+      setEditForm({
+        name: editingOrganization.name,
+        code: editingOrganization.code ?? "",
+        country_id: editingOrganization.country_id ?? "",
+        city_id: editingOrganization.city_id ?? "",
+        address: editingOrganization.address ?? "",
+        is_default: editingOrganization.is_default,
+      });
+      setEditFormError(null);
+    }
+  }, [editingOrganization]);
+
+  const handleUpdateOrganization = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrganization || !tenantId) return;
+    setEditFormError(null);
+    try {
+      await updateOrganizationMutation.mutateAsync({
+        id: editingOrganization.id,
+        name: editForm.name,
+        code: editForm.code || undefined,
+        country_id: editForm.country_id || undefined,
+        city_id: editForm.city_id || undefined,
+        address: editForm.address || undefined,
+        is_default: editForm.is_default,
+      });
+      setEditingOrganization(null);
+    } catch (error: any) {
+      setEditFormError(error?.message ?? "Impossible de modifier l'organisation");
+    }
+  };
+
   const hasOrganizations = organizations && organizations.length > 0;
 
   return (
@@ -284,9 +473,9 @@ export default function SelectOrganizationPage() {
                 <p className="text-sm text-muted-foreground mt-0.5">Sélectionnez ou créez l’organisation avec laquelle travailler</p>
               </div>
             </div>
-            {tenantId && (
-              <Badge variant="secondary" className="w-fit text-xs font-medium px-3 py-1.5 rounded-full bg-muted/80">
-                Tenant : {tenantId}
+            {companyName && (
+              <Badge variant="secondary" className="w-fit text-xs font-medium px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/20">
+                {companyName}
               </Badge>
             )}
           </div>
@@ -332,50 +521,67 @@ export default function SelectOrganizationPage() {
                 </p>
                 <div className="space-y-3 mb-6" role="listbox" aria-label="Liste des organisations">
                   {organizations!.map((org) => (
-                    <button
+                    <div
                       key={org.id}
-                      type="button"
-                      role="option"
-                      aria-selected={selectedOrgId === org.id}
-                      onClick={() => setSelectedOrgId(org.id)}
                       className={cn(
-                        "group flex w-full items-start justify-between gap-3 rounded-2xl border-2 px-4 py-3.5 text-left transition-all duration-200",
+                        "group flex w-full items-start justify-between gap-3 rounded-2xl border-2 px-4 py-3.5 transition-all duration-200",
                         selectedOrgId === org.id
                           ? "border-primary bg-primary/5 shadow-md shadow-primary/10 ring-2 ring-primary/20"
                           : "border-border/80 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 hover:shadow-sm"
                       )}
                     >
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className={cn(
-                          "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors",
-                          selectedOrgId === org.id ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                        )}>
-                          <Building2 className="h-5 w-5" strokeWidth={2} />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-foreground">{org.name}</span>
-                            {org.is_default && (
-                              <Badge variant="outline" className="text-[10px] font-medium rounded-md border-primary/30 text-primary">Par défaut</Badge>
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={selectedOrgId === org.id}
+                        onClick={() => setSelectedOrgId(org.id)}
+                        className="flex flex-1 min-w-0 items-start gap-3 text-left"
+                      >
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className={cn(
+                            "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors",
+                            selectedOrgId === org.id ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                          )}>
+                            <Building2 className="h-5 w-5" strokeWidth={2} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-foreground">{org.name}</span>
+                              {org.is_default && (
+                                <Badge variant="outline" className="text-[10px] font-medium rounded-md border-primary/30 text-primary">Par défaut</Badge>
+                              )}
+                            </div>
+                            {org.code != null && org.code !== "" && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(org.code.trim()) && (
+                              <p className="text-xs text-muted-foreground mt-0.5">Code <span className="font-mono font-medium">{org.code}</span></p>
+                            )}
+                            {org.address != null && org.address !== "" && (
+                              <p className="mt-1 text-xs text-muted-foreground line-clamp-2 flex items-center gap-1">
+                                <MapPin className="h-3 w-3 shrink-0 opacity-70" />
+                                <span className="line-clamp-2">{org.address}</span>
+                              </p>
                             )}
                           </div>
-                          {org.code != null && org.code !== "" && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?$/i.test(org.code.trim()) && (
-                            <p className="text-xs text-muted-foreground mt-0.5">Code <span className="font-mono font-medium">{org.code}</span></p>
-                          )}
-                          {org.address != null && org.address !== "" && (
-                            <p className="mt-1 text-xs text-muted-foreground line-clamp-2 flex items-center gap-1">
-                              <MapPin className="h-3 w-3 shrink-0 opacity-70" />
-                              <span className="line-clamp-2">{org.address}</span>
-                            </p>
-                          )}
                         </div>
-                      </div>
-                      {selectedOrgId === org.id && (
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.5} />
-                        </span>
-                      )}
-                    </button>
+                        {selectedOrgId === org.id && (
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                          </span>
+                        )}
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingOrganization(org);
+                        }}
+                        aria-label="Modifier cette organisation"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
 
@@ -483,6 +689,25 @@ export default function SelectOrganizationPage() {
           </CardContent>
         </Card>
       </div>
+
+        {/* Modal modification organisation */}
+        {editingOrganization &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <EditOrganizationModal
+              organization={editingOrganization}
+              form={editForm}
+              setForm={setEditForm}
+              onSubmit={handleUpdateOrganization}
+              onClose={() => setEditingOrganization(null)}
+              isPending={updateOrganizationMutation.isPending}
+              error={editFormError}
+              countries={countries}
+              countriesLoading={countriesLoading}
+              selectInputClasses={selectInputClasses}
+            />,
+            document.body
+          )}
       </main>
     </div>
   );

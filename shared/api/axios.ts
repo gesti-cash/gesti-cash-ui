@@ -106,24 +106,37 @@ const createAxiosInstance = (): AxiosInstance => {
 // Instance Axios par défaut
 export const apiClient = createAxiosInstance();
 
-// Helper pour extraire les erreurs API (plusieurs formats possibles : message, detail, error)
+// Helper pour extraire les erreurs API (plusieurs formats possibles : message, message.message, detail, error)
 export const extractApiError = (error: unknown): ApiError => {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ message?: string; detail?: string; error?: string; statusMessage?: string; code?: string; errors?: Record<string, string[]> }>;
+    const axiosError = error as AxiosError<{
+      message?: string | { message?: string; error?: string; statusCode?: number };
+      detail?: string;
+      error?: string;
+      statusMessage?: string;
+      code?: string;
+      errors?: Record<string, string[]>;
+    }>;
     const data = axiosError.response?.data;
     const status = axiosError.response?.status;
 
     if (data && typeof data === "object") {
+      const nestedMessage =
+        data.message && typeof data.message === "object" && typeof (data.message as { message?: string }).message === "string"
+          ? (data.message as { message: string }).message
+          : null;
       const message =
         typeof data.message === "string"
           ? data.message
-          : typeof data.detail === "string"
-            ? data.detail
-            : typeof data.error === "string"
-              ? data.error
-              : typeof data.statusMessage === "string"
-                ? data.statusMessage
-                : "Une erreur est survenue";
+          : nestedMessage
+            ? nestedMessage
+            : typeof data.detail === "string"
+              ? data.detail
+              : typeof data.error === "string"
+                ? data.error
+                : typeof data.statusMessage === "string"
+                  ? data.statusMessage
+                  : "Une erreur est survenue";
       return {
         message,
         code: data.code,

@@ -12,6 +12,14 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import {
   useTenantId,
   useSelectedOrganizationId,
@@ -31,6 +39,8 @@ import {
   Plus,
   Search,
   X,
+  Eye,
+  MoreVertical,
   AlertTriangle,
   CheckCircle2,
   Loader2,
@@ -118,6 +128,15 @@ export default function CustomersPage() {
       setSelectedOrganizationId(tenantId, selectedOrgId);
     }
   }, [tenantId, selectedOrgId, setSelectedOrganizationId]);
+
+  const organizationOptions = React.useMemo(
+    () =>
+      organizations.map((org) => ({
+        value: org.id,
+        label: `${org.name}${org.is_default ? " (par défaut)" : ""}`,
+      })),
+    [organizations]
+  );
 
   const { data: customers = [], isLoading, error } = useCustomers(
     tenantId,
@@ -395,36 +414,48 @@ export default function CustomersPage() {
                               ?.name ?? customer.organization_id}
                           </span>
                         </td>
-                        <td className="px-6 py-4 flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedCustomer(customer)}
-                            className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
-                          >
-                            Voir
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingCustomer(customer)}
-                            className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(customer)}
-                            disabled={deletingId === customer.id}
-                            className="text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-500/10"
-                          >
-                            {deletingId === customer.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
+                        <td className="px-6 py-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[140px]">
+                              <DropdownMenuItem
+                                onClick={() => setSelectedCustomer(customer)}
+                                className="text-emerald-600 focus:text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Voir
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setEditingCustomer(customer)}
+                                className="cursor-pointer"
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(customer)}
+                                disabled={deletingId === customer.id}
+                                variant="destructive"
+                                className="cursor-pointer"
+                              >
+                                {deletingId === customer.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )}
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -648,19 +679,15 @@ export default function CustomersPage() {
                           <Building2 className="h-3.5 w-3.5 text-zinc-400" />
                           Organisation <span className="text-red-500">*</span>
                         </Label>
-                        <select
+                        <SearchableSelect
                           id="cust-org"
-                          {...register("organization_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500/50"
-                        >
-                          <option value="">Sélectionner une organisation</option>
-                          {organizations.map((org) => (
-                            <option key={org.id} value={org.id}>
-                              {org.name}
-                              {org.is_default ? " (par défaut)" : ""}
-                            </option>
-                          ))}
-                        </select>
+                          options={organizationOptions}
+                          value={watch("organization_id") ?? ""}
+                          onChange={(v) => setValue("organization_id", v)}
+                          placeholder="Sélectionner une organisation"
+                          searchPlaceholder="Rechercher une organisation…"
+                          emptyMessage="Aucune organisation trouvée"
+                        />
                         {errors.organization_id && (
                           <p className="text-xs text-red-500">
                             {errors.organization_id.message}
@@ -774,17 +801,14 @@ export default function CustomersPage() {
                     {organizations.length > 0 && (
                       <div className="space-y-1.5">
                         <Label>Organisation</Label>
-                        <select
-                          {...updateForm.register("organization_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-                        >
-                          <option value="">—</option>
-                          {organizations.map((org) => (
-                            <option key={org.id} value={org.id}>
-                              {org.name}
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          options={organizationOptions}
+                          value={updateForm.watch("organization_id") ?? ""}
+                          onChange={(v) => updateForm.setValue("organization_id", v)}
+                          placeholder="—"
+                          searchPlaceholder="Rechercher une organisation…"
+                          emptyMessage="Aucune organisation trouvée"
+                        />
                       </div>
                     )}
                     <div className="flex gap-3 pt-2">

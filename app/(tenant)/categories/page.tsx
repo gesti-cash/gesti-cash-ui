@@ -11,9 +11,17 @@ import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Badge } from "@/shared/ui/badge";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import { useTenantId, useSelectedOrganizationId, useSetSelectedOrganizationId } from "@/shared/tenant/store";
 import { useOrganizations } from "@/shared/organizations/hooks";
-import { useCategories, useCreateCategory } from "@/shared/categories/hooks";
+import { useCategories, useCreateCategory, useUpdateCategory, useDeleteCategory } from "@/shared/categories/hooks";
 import { extractApiError } from "@/shared/api/axios";
 import type { Category } from "@/shared/categories/hooks";
 import {
@@ -33,6 +41,10 @@ import {
   ChevronRight,
   Layers,
   ExternalLink,
+  MoreVertical,
+  Eye,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 // ─── Schéma de validation ───────────────────────────────────────────────────
@@ -55,6 +67,12 @@ const createCategorySchema = z.object({
 
 type CreateCategoryFormValues = z.infer<typeof createCategorySchema>;
 
+const updateCategorySchema = createCategorySchema.partial().extend({
+  name: z.string().min(2).optional(),
+  slug: z.string().min(2).regex(/^[a-z0-9-]+$/).optional(),
+});
+type UpdateCategoryFormValues = z.infer<typeof updateCategorySchema>;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function slugify(value: string): string {
@@ -76,6 +94,8 @@ export default function CategoriesPage() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null
   );
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const tenantId = useTenantId();
   const persistedOrgId = useSelectedOrganizationId(tenantId ?? undefined);
@@ -132,7 +152,84 @@ export default function CategoriesPage() {
     selectedOrgId || defaultOrg?.id
   );
 
+  const parentCategoryOptions = React.useMemo(
+    () => [
+      { value: "", label: "Aucune (catégorie racine)" },
+      ...categories
+        .filter((c) => !c.parent_id)
+        .map((cat) => ({ value: cat.id, label: cat.name })),
+    ],
+    [categories]
+  );
+  const organizationOptions = React.useMemo(
+    () =>
+      organizations.map((org) => ({
+        value: org.id,
+        label: `${org.name}${org.is_default ? " (par défaut)" : ""}`,
+      })),
+    [organizations]
+  );
+
   const createCategory = useCreateCategory(tenantId, selectedOrgId);
+  const updateCategory = useUpdateCategory(tenantId, selectedOrgId);
+  const deleteCategory = useDeleteCategory(tenantId, selectedOrgId);
+
+  const handleDeleteCategory = (category: Category) => {
+    if (!window.confirm(`Supprimer la catégorie « ${category.name} » ?`)) return;
+    setDeletingId(category.id);
+    deleteCategory.mutate(category.id, {
+      onSettled: () => setDeletingId(null),
+      onSuccess: () => {
+        if (selectedCategory?.id === category.id) setSelectedCategory(null);
+        if (editingCategory?.id === category.id) setEditingCategory(null);
+      },
+    });
+  };
+
+  const editForm = useForm<UpdateCategoryFormValues>({
+    resolver: zodResolver(updateCategorySchema),
+    defaultValues: {
+      name: "",
+      slug: "",
+      description: "",
+      parent_id: "",
+      sort_order: 0,
+      is_active: true,
+    },
+  });
+  useEffect(() => {
+    if (editingCategory) {
+      editForm.reset({
+        name: editingCategory.name,
+        slug: editingCategory.slug,
+        description: editingCategory.description ?? "",
+        parent_id: editingCategory.parent_id ?? "",
+        sort_order: editingCategory.sort_order ?? 0,
+        is_active: editingCategory.is_active,
+      });
+    }
+  }, [editingCategory]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onSubmitEdit = editForm.handleSubmit(async (values) => {
+    if (!editingCategory) return;
+    await updateCategory.mutateAsync(
+      {
+        id: editingCategory.id,
+        name: values.name,
+        slug: values.slug,
+        description: values.description || undefined,
+        parent_id: values.parent_id || undefined,
+        sort_order: values.sort_order,
+        is_active: values.is_active,
+      },
+      {
+        onSuccess: (updated) => {
+          setSelectedCategory(updated);
+          setEditingCategory(null);
+        },
+      }
+    );
+  });
 
   const onSubmitCreate = handleSubmit(async (values) => {
     const payload = {
@@ -413,6 +510,9 @@ export default function CategoriesPage() {
                             category={category}
                             index={index}
                             onSelect={setSelectedCategory}
+                            onEdit={setEditingCategory}
+                            onDelete={handleDeleteCategory}
+                            deletingId={deletingId}
                             isRoot
                           />
                           {children.map((child, ci) => (
@@ -421,6 +521,9 @@ export default function CategoriesPage() {
                               category={child}
                               index={ci}
                               onSelect={setSelectedCategory}
+                              onEdit={setEditingCategory}
+                              onDelete={handleDeleteCategory}
+                              deletingId={deletingId}
                               isRoot={false}
                             />
                           ))}
@@ -428,7 +531,7 @@ export default function CategoriesPage() {
                       );
                     })}
                     {/* Orphelins (parent inconnu dans la liste filtrée) */}
-                    {childCategories
+                      {childCategories
                       .filter(
                         (c) => !rootCategories.find((r) => r.id === c.parent_id)
                       )
@@ -438,6 +541,9 @@ export default function CategoriesPage() {
                           category={cat}
                           index={i}
                           onSelect={setSelectedCategory}
+                          onEdit={setEditingCategory}
+                          onDelete={handleDeleteCategory}
+                          deletingId={deletingId}
                           isRoot={false}
                         />
                       ))}
@@ -680,20 +786,15 @@ export default function CategoriesPage() {
                         <Layers className="h-3.5 w-3.5 text-zinc-400" />
                         Catégorie parente
                       </Label>
-                      <select
+                      <SearchableSelect
                         id="cat-parent"
-                        {...register("parent_id")}
-                        className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/30 focus-visible:border-violet-500/50"
-                      >
-                        <option value="">Aucune (catégorie racine)</option>
-                        {categories
-                          .filter((c) => !c.parent_id)
-                          .map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                      </select>
+                        options={parentCategoryOptions}
+                        value={watch("parent_id") ?? ""}
+                        onChange={(v) => setValue("parent_id", v)}
+                        placeholder="Aucune (catégorie racine)"
+                        searchPlaceholder="Rechercher une catégorie…"
+                        emptyMessage="Aucune catégorie trouvée"
+                      />
                     </div>
                   )}
 
@@ -742,19 +843,15 @@ export default function CategoriesPage() {
                         <Building2 className="h-3.5 w-3.5 text-zinc-400" />
                         Organisation <span className="text-red-500">*</span>
                       </Label>
-                      <select
+                      <SearchableSelect
                         id="cat-org"
-                        {...register("organization_id")}
-                        className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/30 focus-visible:border-violet-500/50"
-                      >
-                        <option value="">Sélectionner une organisation</option>
-                        {organizations.map((org) => (
-                          <option key={org.id} value={org.id}>
-                            {org.name}
-                            {org.is_default ? " (par défaut)" : ""}
-                          </option>
-                        ))}
-                      </select>
+                        options={organizationOptions}
+                        value={watch("organization_id") ?? ""}
+                        onChange={(v) => setValue("organization_id", v)}
+                        placeholder="Sélectionner une organisation"
+                        searchPlaceholder="Rechercher une organisation…"
+                        emptyMessage="Aucune organisation trouvée"
+                      />
                       {errors.organization_id && (
                         <p className="text-xs text-red-500">
                           {errors.organization_id.message}
@@ -798,6 +895,141 @@ export default function CategoriesPage() {
           </div>,
           document.body
         )}
+
+        {/* Modal d'édition */}
+        {editingCategory &&
+          typeof document !== "undefined" &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300"
+              onClick={() => setEditingCategory(null)}
+            >
+              <Card
+                className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-white to-zinc-50/50 border-zinc-200/80 dark:from-zinc-950 dark:via-zinc-900/50 dark:to-zinc-900/30 dark:border-zinc-900/50 shadow-2xl animate-in zoom-in-95 duration-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-t-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-violet-500/20">
+                        <FolderOpen className="h-5 w-5 text-violet-500" />
+                      </div>
+                      <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+                        Modifier la catégorie
+                      </h2>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditingCategory(null)}
+                      className="hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  <form onSubmit={onSubmitEdit} className="p-6 space-y-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-cat-name" className="flex items-center gap-2 text-sm font-medium">
+                        <Tag className="h-3.5 w-3.5 text-zinc-400" />
+                        Nom <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="edit-cat-name"
+                        placeholder="ex: Électronique"
+                        {...editForm.register("name")}
+                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                      />
+                      {editForm.formState.errors.name && (
+                        <p className="text-xs text-red-500">{editForm.formState.errors.name.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-cat-slug" className="flex items-center gap-2 text-sm font-medium">
+                        <Hash className="h-3.5 w-3.5 text-zinc-400" />
+                        Slug <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="edit-cat-slug"
+                        {...editForm.register("slug")}
+                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 font-mono"
+                      />
+                      {editForm.formState.errors.slug && (
+                        <p className="text-xs text-red-500">{editForm.formState.errors.slug.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-cat-desc" className="flex items-center gap-2 text-sm font-medium">
+                        <AlignLeft className="h-3.5 w-3.5 text-zinc-400" />
+                        Description
+                      </Label>
+                      <textarea
+                        id="edit-cat-desc"
+                        rows={3}
+                        {...editForm.register("description")}
+                        className="flex w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500/30 resize-none"
+                      />
+                    </div>
+                    {categories.filter((c) => !c.parent_id).length > 0 && (
+                      <div className="space-y-1.5">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          <Layers className="h-3.5 w-3.5 text-zinc-400" />
+                          Catégorie parente
+                        </Label>
+                        <SearchableSelect
+                          options={parentCategoryOptions}
+                          value={editForm.watch("parent_id") ?? ""}
+                          onChange={(v) => editForm.setValue("parent_id", v)}
+                          placeholder="Aucune (catégorie racine)"
+                          searchPlaceholder="Rechercher…"
+                          emptyMessage="Aucune catégorie trouvée"
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <Label className="flex items-center gap-2 text-sm font-medium">Ordre de tri</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        {...editForm.register("sort_order", { valueAsNumber: true })}
+                        className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Catégorie active</span>
+                      <input
+                        type="checkbox"
+                        {...editForm.register("is_active")}
+                        className="h-4 w-4 rounded border-zinc-300 text-violet-600 focus:ring-violet-500"
+                      />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingCategory(null)}
+                        className="flex-1"
+                        disabled={updateCategory.isPending}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-500/20 font-semibold"
+                        disabled={updateCategory.isPending}
+                      >
+                        {updateCategory.isPending ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enregistrement...</>
+                        ) : (
+                          <>Enregistrer</>
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>,
+            document.body
+          )}
       </div>
     </div>
   );
@@ -809,11 +1041,17 @@ function CategoryRow({
   category,
   index,
   onSelect,
+  onEdit,
+  onDelete,
+  deletingId,
   isRoot,
 }: {
   category: Category;
   index: number;
   onSelect: (c: Category) => void;
+  onEdit: (c: Category) => void;
+  onDelete: (c: Category) => void;
+  deletingId: string | null;
   isRoot: boolean;
 }) {
   return (
@@ -897,14 +1135,47 @@ function CategoryRow({
 
       {/* Actions */}
       <td className="px-6 py-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onSelect(category)}
-          className="text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 hover:bg-violet-500/10"
-        >
-          Voir
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[140px]">
+            <DropdownMenuItem
+              onClick={() => onSelect(category)}
+              className="text-violet-600 focus:text-violet-700 dark:text-violet-400 dark:focus:text-violet-300 cursor-pointer"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Voir
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onEdit(category)}
+              className="cursor-pointer"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Modifier
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(category)}
+              disabled={deletingId === category.id}
+              variant="destructive"
+              className="cursor-pointer"
+            >
+              {deletingId === category.id ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </td>
     </tr>
   );

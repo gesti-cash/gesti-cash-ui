@@ -3,6 +3,33 @@ export { cn } from "./cn";
 export { checkAuthFromStorage, hasAuthInStorage, hasTenantInStorage } from "./auth-check";
 
 /**
+ * Formate un nombre avec séparateurs de milliers (ex: 1 234 567,89).
+ * Utilise la locale fr-FR par défaut (espace comme séparateur de milliers).
+ */
+export function formatAmount(
+  value: number | string,
+  locale: string = "fr-FR",
+  options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
+): string {
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (Number.isNaN(num)) return "0";
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: options?.minimumFractionDigits ?? 0,
+    maximumFractionDigits: options?.maximumFractionDigits ?? 2,
+  }).format(num);
+}
+
+/**
+ * Formate un montant en FCFA avec séparateurs de milliers (ex: 1 234 567 FCFA).
+ */
+export function formatPriceFCFA(
+  amount: number | string,
+  locale: string = "fr-FR"
+): string {
+  return `${formatAmount(amount, locale)} FCFA`;
+}
+
+/**
  * Formater un montant en devise
  */
 export function formatCurrency(

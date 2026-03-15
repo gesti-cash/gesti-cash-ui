@@ -26,6 +26,14 @@ import { Card, CardContent } from "@/shared/ui/card";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { SearchableSelect } from "@/shared/ui/searchable-select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 import {
   Truck,
   Plus,
@@ -40,6 +48,8 @@ import {
   ExternalLink,
   Pencil,
   Trash2,
+  Eye,
+  MoreVertical,
 } from "lucide-react";
 
 const createSupplierSchema = z.object({
@@ -122,6 +132,15 @@ export default function SuppliersPage() {
       organization_id: "",
     },
   });
+
+  const organizationOptions = React.useMemo(
+    () =>
+      organizations.map((org) => ({
+        value: org.id,
+        label: `${org.name}${org.is_default ? " (par défaut)" : ""}`,
+      })),
+    [organizations]
+  );
 
   const createSupplier = useCreateSupplier(tenantId, selectedOrgId || undefined);
   const updateSupplier = useUpdateSupplier(tenantId, selectedOrgId || undefined);
@@ -403,36 +422,48 @@ export default function SuppliersPage() {
                             <span className="text-sm text-zinc-400">—</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedSupplier(supplier)}
-                            className="text-orange-600 hover:text-orange-700 dark:text-orange-400 hover:bg-orange-500/10"
-                          >
-                            Voir
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingSupplier(supplier)}
-                            className="text-zinc-600 hover:text-zinc-700 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(supplier)}
-                            disabled={deletingId === supplier.id}
-                            className="text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-500/10"
-                          >
-                            {deletingId === supplier.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
+                        <td className="px-6 py-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="min-w-[140px]">
+                              <DropdownMenuItem
+                                onClick={() => setSelectedSupplier(supplier)}
+                                className="text-orange-600 focus:text-orange-700 dark:text-orange-400 cursor-pointer"
+                              >
+                                <Eye className="h-4 w-4 mr-2" />
+                                Voir
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => setEditingSupplier(supplier)}
+                                className="cursor-pointer"
+                              >
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(supplier)}
+                                disabled={deletingId === supplier.id}
+                                variant="destructive"
+                                className="cursor-pointer"
+                              >
+                                {deletingId === supplier.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                )}
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -809,17 +840,14 @@ export default function SuppliersPage() {
                     {organizations.length > 0 && (
                       <div className="space-y-1.5">
                         <Label>Organisation</Label>
-                        <select
-                          {...updateForm.register("organization_id")}
-                          className="flex h-10 w-full rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-                        >
-                          <option value="">—</option>
-                          {organizations.map((org) => (
-                            <option key={org.id} value={org.id}>
-                              {org.name}
-                            </option>
-                          ))}
-                        </select>
+                        <SearchableSelect
+                          options={organizationOptions}
+                          value={updateForm.watch("organization_id") ?? ""}
+                          onChange={(v) => updateForm.setValue("organization_id", v)}
+                          placeholder="—"
+                          searchPlaceholder="Rechercher une organisation…"
+                          emptyMessage="Aucune organisation trouvée"
+                        />
                       </div>
                     )}
                     <div className="flex gap-3 pt-2">

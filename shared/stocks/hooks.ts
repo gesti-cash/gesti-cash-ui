@@ -22,6 +22,7 @@ export interface CreateOrAdjustStockInput {
 /** Corps pour modifier la quantité - PATCH /api/v1/stocks/{id} */
 export interface UpdateStockQuantityInput {
   quantity: number;
+  reason?: string;
 }
 
 /** Liste des stocks - GET /api/v1/stocks */
@@ -116,17 +117,22 @@ export const useUpdateStockQuantity = (
     mutationFn: async ({
       id,
       quantity,
+      reason,
     }: UpdateStockQuantityInput & { id: string }) => {
       if (!tenantId) throw new Error("No tenant ID provided");
       if (!id) throw new Error("No stock ID provided");
 
-      const response = await apiClient.patch<Stock>(`/stocks/${id}`, { quantity }, {
-        params: {
-          tenantId,
-          ...(organizationId != null &&
-            organizationId !== "" && { organizationId }),
-        },
-      });
+      const response = await apiClient.patch<Stock>(
+        `/stocks/${id}`,
+        { quantity, ...(reason != null && reason !== "" && { reason }) },
+        {
+          params: {
+            tenantId,
+            ...(organizationId != null &&
+              organizationId !== "" && { organizationId }),
+          },
+        }
+      );
       return response.data;
     },
     onSuccess: (_, variables) => {
